@@ -1,0 +1,10 @@
+{
+  "parserOptions": { "sourceType": "module" },
+  "env": {
+    "jasmine": true,
+    "mocha": true,
+    "browser": true,
+    "builtin": true,
+    "es6": true
+  }
+}
