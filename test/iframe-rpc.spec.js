@@ -1,4 +1,4 @@
-describe('Iframe-rpc', function() {
+describe('iframe-rpc', function() {
   let ready;
   window.isParent = "parent";
   const childWindow = () => document.getElementById('childIframe').contentWindow;
@@ -158,6 +158,17 @@ describe('Iframe-rpc', function() {
              );
     });
   });
+
+  it('works with valid origin passed to invoke()', function(done) {
+     ready.then((child) => {
+             onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => 
+                 parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
+                     expect(result).toBe("child");
+                     done();
+                 })
+             );
+    });
+  });
   
   it('times out with invalid origin whitelist', function(done) {
      const originWhitelist = [];
@@ -171,6 +182,23 @@ describe('Iframe-rpc', function() {
      }).then(() => {
          originWhitelist.push("https://not.my.origin:69");
          return window.parentRPC.invoke(childWindow(), null, "callme");
+     }).then(
+         (result) => done(new Error('Promise should not be resolved')),
+         (reject) => {
+            expect(reject).toEqual(new Error('Timeout waiting for RPC response after 100 ms'));
+            done();
+         }
+     );
+  });
+
+  it('times out with invalid origin passed to invoke()', function(done) {
+     ready.then((child) => {
+         // re-init parentRPC to use timeout
+         window.parentRPC.close();
+         window.parentRPC = iframeRPC({'timeout': 100});
+         return onScriptRun('childRPC.register("callme", () => window.isChild);');
+     }).then(() => {
+         return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme");
      }).then(
          (result) => done(new Error('Promise should not be resolved')),
          (reject) => {
