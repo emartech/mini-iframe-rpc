@@ -105,7 +105,7 @@ export default (init) => {
         if (!(err instanceof Error)) {
             return err;
         }
-        return windowRef.JSON.stringify(merge(err));
+        return windowRef.JSON.stringify(merge(err, {"message": err.message}));
     };
 
     const respond = (messageEvent) => {

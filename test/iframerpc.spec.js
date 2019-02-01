@@ -185,7 +185,7 @@ describe('iframe-rpc', function() {
             (reject) => {
                 // exception data is JSON encoded so original stack can be retrieved
                 const exData = JSON.parse(reject.message);
-                expect(exData.stack.indexOf('could not be cloned') > -1).toBe(true);
+                expect(exData.message.indexOf('could not be cloned') > -1).toBe(true);
                 done();
             });
     });
