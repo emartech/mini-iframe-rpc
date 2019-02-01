@@ -5,7 +5,7 @@ const path = require('path');
 const env = require('yargs').argv.env; // use --env with webpack 2
 const pkg = require('./package.json');
 
-let libraryName = pkg.name;
+let libraryName = pkg.name.replace("-", "");
 
 let outputFile, mode, devtool;
 
@@ -20,7 +20,7 @@ if (env === 'build') {
 
 const config = {
   mode: mode,
-  entry: __dirname + '/src/iframeRPC.js',
+  entry: __dirname + '/src/'+libraryName+'.js',
   devtool: devtool,
   output: {
     path: __dirname + '/lib',

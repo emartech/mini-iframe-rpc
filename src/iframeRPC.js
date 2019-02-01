@@ -57,22 +57,25 @@ export default (init) => {
         return randomId;
     }
 
-    const sendMessage = (targetWindow, targetOrigin, message) => {
-        const fullMessage = {
-            "type": RPC_MESSAGE_TYPE,
-            "message": message };
-        return targetWindow.postMessage(fullMessage, targetOrigin || "*");
-    };
+    const sendMessage = (targetWindow, targetOrigin, message) => new Promise((resolve, reject) => {
+        try {
+            targetWindow.postMessage({
+                "type": RPC_MESSAGE_TYPE,
+                "message": message}, targetOrigin || "*");
+            resolve();
+        } catch (e) {
+            reject(e);
+        }
+    });
 
     const invoke = (targetWindow, targetOrigin, procedure, argumentList) => {
         const callId = getNextCallId();
-        sendMessage(targetWindow, targetOrigin, {
+        let resultPromise = sendMessage(targetWindow, targetOrigin, {
             "contents": REQUEST,
             "callId" : callId,
             "procedure": procedure,
             "argumentList": (argumentList || [])
-        });
-        const resultPromise = new Promise((resolve, reject) => {
+        }).then(() => new Promise((resolve, reject) => {
             callbacks[callId] = {
                 "result": (result) => {
                     delete callbacks[callId];
@@ -80,60 +83,71 @@ export default (init) => {
                 },
                 "exception": (exception) => {
                     delete callbacks[callId];
-                    reject(exception);
+                    reject(new Error(exception));
                 }
             };
-        });
-        return timeout > 0 ? timeboxPromise(resultPromise, timeout) : resultPromise;
+        }));
+        if (timeout > 0) {
+            resultPromise = timeboxPromise(resultPromise, timeout);
+        }
+        return resultPromise;
     };
 
-    const cloneError = (err) => {
+    const merge = (...objects) => {
+        const dest = {};
+        objects.forEach(obj => Object.getOwnPropertyNames(obj).forEach(function(key) {
+            dest[key] = obj[key];
+        }));
+        return dest;
+    }
+
+    const formatError = (err) => {
         if (!(err instanceof Error)) {
             return err;
         }
-        const plainObject = {};
-        Object.getOwnPropertyNames(err).forEach(function(key) {
-            plainObject[key] = err[key];
-        });
-        return plainObject;
+        return windowRef.JSON.stringify(merge(err));
+    };
+
+    const respond = (messageEvent) => {
+        const message = messageEvent.data.message
+        const callId = message.callId;
+        const procedure = message.procedure;
+        const argumentList = message.argumentList;
+        const responseOrigin = !messageEvent.origin || messageEvent.origin === "null" ? null : messageEvent.origin;
+        const response = {"callId" : callId};
+        const sendError = (ex) => sendMessage(
+                messageEvent.source,
+                responseOrigin,
+                merge(response, {
+                    "contents": EXCEPTION,
+                    "exception": formatError(ex)}));
+        if (registeredProcedures[procedure]) {
+            try {
+                return Promise.resolve(
+                    registeredProcedures[procedure].apply(messageEvent, argumentList)).then(
+                        result => sendMessage(
+                            messageEvent.source,
+                            responseOrigin,
+                            merge(response, {
+                                "contents": RESULT,
+                                "result": result})).catch(sendError),
+                        sendError);
+            } catch (ex) {
+                return sendError(ex);
+            }
+        } else {
+            return sendError("Procedure not found: " + procedure);
+        }
     };
 
     const recv = (messageEvent) => {
         if ((originWhitelist.length < 1 || originWhitelist.indexOf(messageEvent.origin) > -1) &&
             messageEvent.data && messageEvent.data.type === RPC_MESSAGE_TYPE) {
             const message = messageEvent.data.message
-            const callId = message.callId;
             if (message.contents === REQUEST) {
-                const procedure = message.procedure;
-                const argumentList = message.argumentList;
-                const responseOrigin = !messageEvent.origin || messageEvent.origin === "null" ? null : messageEvent.origin;
-                const response = {"callId" : callId};
-                const sendError = (ex) => {
-                    sendMessage(
-                        messageEvent.source,
-                        responseOrigin,
-                        Object.assign(response, {
-                            "contents": EXCEPTION,
-                            "exception": cloneError(ex)}));
-                };
-                if (registeredProcedures[procedure]) {
-                    try {
-                        Promise.resolve(
-                            registeredProcedures[procedure].apply(messageEvent, argumentList)).then(
-                                result => sendMessage(
-                                    messageEvent.source,
-                                    responseOrigin,
-                                    Object.assign(response, {
-                                        "contents": RESULT,
-                                        "result": result})),
-                                sendError);
-                    } catch (ex) {
-                        sendError(ex.toString());
-                    }
-                } else {
-                    sendError("Procedure not found: " + procedure);
-                }
+                respond(messageEvent);
             } else {
+                const callId = message.callId;
                 const contents = message.contents;
                 if (contents && callbacks[callId]) {
                     callbacks[callId][contents](message[contents]);

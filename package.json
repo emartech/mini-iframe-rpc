@@ -1,7 +1,8 @@
 {
-  "name": "iframeRPC",
+  "name": "iframe-rpc",
   "description": "RPC across iframes using postMessage API",
-  "main": "lib/iframe-rpc.js",
+  "version": "1.0.0",
+  "main": "lib/iframerpc.js",
   "scripts": {
     "build": "webpack --env dev && webpack --env build && npm run test",
     "test": "karma start test/karma.conf.js",

@@ -11,7 +11,7 @@ module.exports = function(config) {
     singleRun: true,
     reporters: ['mocha'],
     files: [
-      '../lib/iframeRPC.js',
+      `${webpackConfig.output.path}/${webpackConfig.output.filename}`,
       '*.spec.js',
     ],
     webpack: { ...webpackConfig, optimization: undefined },

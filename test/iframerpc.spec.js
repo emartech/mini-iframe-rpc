@@ -22,10 +22,10 @@ describe('iframe-rpc', function() {
 
     // inject the HTML fixture for the tests
     beforeEach(() => {
-        window.parentRPC = iframeRPC();
+        window.parentRPC = iframerpc();
         ready = onScriptRun(`
             window.isChild = "child";
-            window.childRPC = (${iframeRPC.toString()})();
+            window.childRPC = (${iframerpc.toString()})();
             `).then(() => childWindow());
     });
 
@@ -104,7 +104,7 @@ describe('iframe-rpc', function() {
             parentRPC.invoke(child, null, "unregistered_function").then(
                 (result) => done(new Error('Promise should not be resolved')),
                 (reject) => {
-                    expect(reject).toEqual('Procedure not found: unregistered_function');
+                    expect(reject).toEqual(new Error('Procedure not found: unregistered_function'));
                     done();
                 });
         });
@@ -122,7 +122,7 @@ describe('iframe-rpc', function() {
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual('Procedure not found: callme');
+                expect(reject).toEqual(new Error('Procedure not found: callme'));
                 done();
             });
     });
@@ -131,7 +131,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframeRPC({'timeout': 100});
+            window.parentRPC = iframerpc({'timeout': 100});
             onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
         }).then(() => parentRPC.invoke(childWindow(), null, "callme")
@@ -157,7 +157,9 @@ describe('iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual('Error: err');
+                // exception data is JSON encoded so original stack can be retrieved
+                const exData = JSON.parse(reject.message);
+                expect(exData.message).toEqual('err');
                 done();
             });
     });
@@ -169,7 +171,34 @@ describe('iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual('reject');
+                expect(reject).toEqual(new Error('reject'));
+                done();
+            });
+    });
+
+    it('gracefully handles unserializable response objects', function(done) {
+        ready.then(
+            () => onScriptRun(`childRPC.register("err", () => window);`)
+        ).then(() => parentRPC.invoke(childWindow(), null, "err")
+        ).then(
+            (result) => done(new Error('Promise should not be resolved')),
+            (reject) => {
+                // exception data is JSON encoded so original stack can be retrieved
+                const exData = JSON.parse(reject.message);
+                expect(exData.stack.indexOf('could not be cloned') > -1).toBe(true);
+                done();
+            });
+    });
+
+    it('gracefully handles unserializable request objects', function(done) {
+        ready.then(
+            () => onScriptRun(`childRPC.register("callme", () => true);`)
+        ).then(() => parentRPC.invoke(childWindow(), null, "callme", [window])
+        ).then(
+            (result) => done(new Error('Promise should not be resolved')),
+            (reject) => {
+                // exception data is JSON encoded so original stack can be retrieved
+                expect(reject.toString().indexOf('could not be cloned') > -1).toBe(true);
                 done();
             });
     });
@@ -179,7 +208,7 @@ describe('iframe-rpc', function() {
             () => {
                 // re-init parentRPC to use timeout
                 window.parentRPC.close();
-                window.parentRPC = iframeRPC({'timeout': 100});
+                window.parentRPC = iframerpc({'timeout': 100});
                 onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);
@@ -199,7 +228,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframeRPC({'originWhitelist': [window.location.origin]});
+            window.parentRPC = iframerpc({'originWhitelist': [window.location.origin]});
             onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => 
                 parentRPC.invoke(child, null, "callme").then((result) => {
                     expect(result).toBe("child");
@@ -227,7 +256,7 @@ describe('iframe-rpc', function() {
             window.parentRPC.close();
             // the initial origin whitelist must be configured properly for the 'ready' event
             // to be received, so it's broken later.
-            window.parentRPC = iframeRPC({'timeout': 100, 'originWhitelist': originWhitelist});
+            window.parentRPC = iframerpc({'timeout': 100, 'originWhitelist': originWhitelist});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             originWhitelist.push("https://not.my.origin:69");
@@ -245,7 +274,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframeRPC({'timeout': 100});
+            window.parentRPC = iframerpc({'timeout': 100});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme");
@@ -257,5 +286,5 @@ describe('iframe-rpc', function() {
             }
         );
     });
-
+ 
 });
