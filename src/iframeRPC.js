@@ -15,8 +15,8 @@ export default (init) => {
                 exception: 
             }
         }
-
     */
+
     const REQUEST = "request", RESULT = "result", EXCEPTION = "exception"; // TODO: type no such method, exception, timeout, etc.
     const RPC_MESSAGE_TYPE = "iframe-rpc";
 
@@ -26,14 +26,14 @@ export default (init) => {
     const timeout = init.timeout || 0;
 
     const timeboxPromise = (originalPromise, milisecondsToWait) => {
-      return Promise.race([
-        originalPromise,
-        new Promise((_resolve, reject) => {
-          windowRef.setTimeout(
-            () => reject(new Error('Timeout waiting for RPC response after ' + milisecondsToWait + ' ms')),
-            milisecondsToWait);
-        })
-      ]);
+        return Promise.race([
+            originalPromise,
+            new Promise((_resolve, reject) => {
+                windowRef.setTimeout(
+                    () => reject(new Error('Timeout waiting for RPC response after ' + milisecondsToWait + ' ms')),
+                    milisecondsToWait);
+            })
+        ]);
     };
 
 
@@ -42,7 +42,11 @@ export default (init) => {
     const registeredProcedures = {};
 
     const register = function(name, implementation) {
-        registeredProcedures[name] = implementation;
+        if (implementation) {
+            registeredProcedures[name] = implementation;
+        } else {
+            delete registeredProcedures[name];
+        }
     };
 
     const getNextCallId = () => {
@@ -116,13 +120,13 @@ export default (init) => {
                     try {
                         Promise.resolve(
                             registeredProcedures[procedure].apply(messageEvent, argumentList)).then(
-                            result => sendMessage(
-                                messageEvent.source,
-                                responseOrigin,
-                                Object.assign(response, {
-                                    "contents": RESULT,
-                                    "result": result})),
-                            sendError);
+                                result => sendMessage(
+                                    messageEvent.source,
+                                    responseOrigin,
+                                    Object.assign(response, {
+                                        "contents": RESULT,
+                                        "result": result})),
+                                sendError);
                     } catch (ex) {
                         sendError(ex.toString());
                     }

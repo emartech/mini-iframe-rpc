@@ -8,7 +8,7 @@ module.exports = function(config) {
     frameworks: ['jasmine'],
     port: 9876,
     colors: true,
-    singleRun: false,
+    singleRun: true,
     reporters: ['mocha'],
     files: [
       '../lib/iframeRPC.js',
