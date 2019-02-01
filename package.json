@@ -1,8 +1,8 @@
 {
-  "name": "iframe-rpc",
+  "name": "mini-iframe-rpc",
   "description": "RPC across iframes using postMessage API",
   "version": "1.0.0",
-  "main": "lib/iframerpc.js",
+  "main": "lib/mini_iframe_rpc.js",
   "scripts": {
     "build": "webpack --env dev && webpack --env build && npm run test",
     "test": "karma start test/karma.conf.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neumark/iframe-rpc.git"
+    "url": "git+https://github.com/neumark/mini-iframe-rpc.git"
   },
   "author": "Peter Neumark",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/neumark/iframe-rpc/issues"
+    "url": "https://github.com/neumark/mini-iframe-rpc/issues"
   },
-  "homepage": "https://github.com/neumark/iframe-rpc",
+  "homepage": "https://github.com/neumark/mini-iframe-rpc",
   "devDependencies": {
     "@babel/cli": "^7.0.0-beta.51",
     "@babel/core": "^7.0.0-beta.51",

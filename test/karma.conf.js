@@ -14,7 +14,6 @@ module.exports = function(config) {
       `${webpackConfig.output.path}/${webpackConfig.output.filename}`,
       '*.spec.js',
     ],
-    webpack: { ...webpackConfig, optimization: undefined },
     webpack: webpackConfig,
     browsers: ['Chrome'],
     customLaunchers: {

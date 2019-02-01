@@ -5,7 +5,7 @@ const path = require('path');
 const env = require('yargs').argv.env; // use --env with webpack 2
 const pkg = require('./package.json');
 
-let libraryName = pkg.name.replace("-", "");
+let libraryName = pkg.name.replace(/-/g, '_');
 
 let outputFile, mode, devtool;
 

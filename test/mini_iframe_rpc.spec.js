@@ -1,4 +1,4 @@
-describe('iframe-rpc', function() {
+describe('mini-iframe-rpc', function() {
     let ready;
     window.isParent = "parent";
     const childWindow = () => document.getElementById('childIframe').contentWindow;
@@ -22,10 +22,10 @@ describe('iframe-rpc', function() {
 
     // inject the HTML fixture for the tests
     beforeEach(() => {
-        window.parentRPC = iframerpc();
+        window.parentRPC = mini_iframe_rpc();
         ready = onScriptRun(`
             window.isChild = "child";
-            window.childRPC = (${iframerpc.toString()})();
+            window.childRPC = (${mini_iframe_rpc.toString()})();
             `).then(() => childWindow());
     });
 
@@ -131,7 +131,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframerpc({'timeout': 100});
+            window.parentRPC = mini_iframe_rpc({'timeout': 100});
             onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
         }).then(() => parentRPC.invoke(childWindow(), null, "callme")
@@ -208,7 +208,7 @@ describe('iframe-rpc', function() {
             () => {
                 // re-init parentRPC to use timeout
                 window.parentRPC.close();
-                window.parentRPC = iframerpc({'timeout': 100});
+                window.parentRPC = mini_iframe_rpc({'timeout': 100});
                 onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);
@@ -228,7 +228,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframerpc({'originWhitelist': [window.location.origin]});
+            window.parentRPC = mini_iframe_rpc({'originWhitelist': [window.location.origin]});
             onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => 
                 parentRPC.invoke(child, null, "callme").then((result) => {
                     expect(result).toBe("child");
@@ -256,7 +256,7 @@ describe('iframe-rpc', function() {
             window.parentRPC.close();
             // the initial origin whitelist must be configured properly for the 'ready' event
             // to be received, so it's broken later.
-            window.parentRPC = iframerpc({'timeout': 100, 'originWhitelist': originWhitelist});
+            window.parentRPC = mini_iframe_rpc({'timeout': 100, 'originWhitelist': originWhitelist});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             originWhitelist.push("https://not.my.origin:69");
@@ -274,7 +274,7 @@ describe('iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = iframerpc({'timeout': 100});
+            window.parentRPC = mini_iframe_rpc({'timeout': 100});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme");
