@@ -114,13 +114,13 @@ export default (init) => {
         const procedure = message.procedure;
         const argumentList = message.argumentList;
         const responseOrigin = !messageEvent.origin || messageEvent.origin === "null" ? null : messageEvent.origin;
-        const response = {"callId" : callId};
         const sendError = (ex) => sendMessage(
                 messageEvent.source,
                 responseOrigin,
-                merge(response, {
+                {
+                    "callId" : callId,
                     "contents": EXCEPTION,
-                    "exception": formatError(ex)}));
+                    "exception": formatError(ex)});
         if (registeredProcedures[procedure]) {
             try {
                 return Promise.resolve(
@@ -128,9 +128,10 @@ export default (init) => {
                         result => sendMessage(
                             messageEvent.source,
                             responseOrigin,
-                            merge(response, {
+                            {
+                                "callId" : callId,
                                 "contents": RESULT,
-                                "result": result})).catch(sendError),
+                                "result": result}).catch(sendError),
                         sendError);
             } catch (ex) {
                 return sendError(ex);
