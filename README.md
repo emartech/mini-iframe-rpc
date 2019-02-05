@@ -30,3 +30,6 @@ To call this code from the iframe, do:
         rpc.register(window.parent, "http://window-parent-location.com", 'mySuperFunction');
     </script>
 
+## Packaging
+
+Packaging is partly based on https://github.com/Hotell/typescript-lib-starter/
