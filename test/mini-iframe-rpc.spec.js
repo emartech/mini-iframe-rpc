@@ -19,16 +19,16 @@ describe('mini-iframe-rpc', function() {
     };
 
     beforeEach(() => {
-        window.parentRPC = new mini_iframe_rpc.MiniIframeRPC();
+        window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
         // inject the HTML fixture for the tests
         const iframe = document.createElement('iframe');
         iframe.srcdoc = `
             <html>
                 <body>
-                    <script src="${document.querySelectorAll('script[src*="mini_iframe_rpc.js"]')[0].src}"><\/script>
+                    <script src="${document.querySelectorAll('script[src*="mini-iframe-rpc.js"]')[0].src}"><\/script>
                     <script>
                         window.isChild = "child";
-                        window.childRPC = new mini_iframe_rpc.MiniIframeRPC();
+                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
                         window.childRPC.register("appendScript", (script) => {
                             const element = document.createElement('script');
                             element.innerHTML = script;
@@ -153,7 +153,7 @@ describe('mini-iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = new mini_iframe_rpc.MiniIframeRPC({'timeout': 100});
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100});
             onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
         }).then(() => parentRPC.invoke(childWindow(), null, "callme")
@@ -230,7 +230,7 @@ describe('mini-iframe-rpc', function() {
             () => {
                 // re-init parentRPC to use timeout
                 window.parentRPC.close();
-                window.parentRPC = new mini_iframe_rpc.MiniIframeRPC({'timeout': 100});
+                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100});
                 onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);
