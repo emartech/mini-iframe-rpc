@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --env dev && webpack --env build && npm run test",
     "test": "karma start test/karma.conf.js",
-    "lint": "eslint $(find . -name \"*.js\" -not -path \"./node_modules/*\")"
+    "lint": "tslint -p ."
   },
   "repository": {
     "type": "git",
