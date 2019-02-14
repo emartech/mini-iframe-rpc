@@ -246,4 +246,18 @@ describe('mini-iframe-rpc', function() {
             });
     });
 
+    it('can invoke function registered in the same RPC instance', function(done) {
+        const ARGS = [1,2,3];
+        ready.then(() => {
+            window.parentRPC.register('callme', (...args) =>  {
+                return args.map((x) => x + 1);
+            });
+            window.parentRPC.invoke(window, window.location.origin, 'callme', ARGS).then(
+                (result) =>{
+                    expect(result).toEqual([2,3,4]);
+                    done();
+                }
+            );
+        });
+    });
 });
