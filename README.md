@@ -27,7 +27,7 @@ To call this code from the iframe, do:
     <script>
         const iframe = ...
         const rpc = mini_iframe_rpc();
-        rpc.register(window.parent, "http://window-parent-location.com", 'mySuperFunction');
+        rpc.invoke(window.parent, "http://window-parent-location.com", 'mySuperFunction');
     </script>
 
 ## Packaging
