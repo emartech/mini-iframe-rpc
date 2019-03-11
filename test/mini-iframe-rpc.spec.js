@@ -161,7 +161,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response after 100 ms'));
+                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
                 done();
             }
         );
@@ -176,9 +176,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                // exception data is JSON encoded so original stack can be retrieved
-                const exData = JSON.parse(reject.message);
-                expect(exData.message).toEqual('err');
+                expect(reject).toEqual(new Error('err'));
                 done();
             });
     });
@@ -190,7 +188,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('reject'));
+                expect(reject).toEqual('reject');
                 done();
             });
     });
@@ -202,9 +200,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                // exception data is JSON encoded so original stack can be retrieved
-                const exData = JSON.parse(reject.message);
-                expect(exData.message.indexOf('could not be cloned') > -1).toBe(true);
+                expect(reject.message.indexOf('could not be cloned') > -1).toBe(true);
                 done();
             });
     });
@@ -216,8 +212,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                // exception data is JSON encoded so original stack can be retrieved
-                expect(reject.toString().indexOf('could not be cloned') > -1).toBe(true);
+                expect(reject.message.indexOf('could not be cloned') > -1).toBe(true);
                 done();
             });
     });
@@ -235,7 +230,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response after 100 ms'));
+                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "err" after 100 ms'));
                 done();
             });
     });

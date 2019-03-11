@@ -25,7 +25,7 @@ export declare class MiniIframeRPC {
     private timeboxPromise;
     private getNextCallId;
     private sendMessage;
-    private formatError;
+    private serializeError;
     private handleRequest;
     private handleResponse;
     private recv;

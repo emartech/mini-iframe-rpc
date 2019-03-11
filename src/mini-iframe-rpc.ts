@@ -1,6 +1,8 @@
 
 /* tslint:disable no-any no-unsafe-any */
 
+import {deserializeError, ProcedureNotFoundError, RemoteEvaluationError, TimeoutError} from './errors';
+
 const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
 const CALLID_LENGTH = 8;
@@ -15,16 +17,17 @@ interface RequestMessageBody  {
 interface ResultMessageBody {
     contents: "result";
     callId: string;    
-    result: any | null
+    result: any
 }
 
-interface ExceptionMessageBody {
-    contents: "exception";
+interface ErrorMessageBody {
+    contents: "error";
     callId: string;
-    exception: string
+    isErrorInstance: boolean;
+    errorValue: any;
 }
 
-type MessageBody = RequestMessageBody | ResultMessageBody | ExceptionMessageBody;
+type MessageBody = RequestMessageBody | ResultMessageBody | ErrorMessageBody;
 
 export interface InvocationOptions {
     timeout: number;
@@ -47,7 +50,7 @@ export interface InitParameters {
 
 interface CallbackFunctions {
     result: (result: any) => void,
-    exception: (exception: string) => void
+    error: (error: any) => void
 }
 
 type ProcedureImplementation = (...args: any[]) => any;
@@ -96,9 +99,9 @@ export class MiniIframeRPC {
                     this.callbacks.delete(callId);
                     resolve(result);
                 },
-                exception: (exception : string) => {
+                error: (err : any) => {
                     this.callbacks.delete(callId);
-                    reject(new Error(exception));
+                    reject(err);
                 }
             };
             this.callbacks.set(callId, callbacks);
@@ -110,7 +113,7 @@ export class MiniIframeRPC {
                     if (error === timeoutMarker) {
                         // retry?
                         // when retry exhaused raise timeout error
-                        throw new Error(`Timeout waiting for RPC response after ${options.timeout} ms`);
+                        throw new TimeoutError({procedureName, timeoutMilliSeconds: options.timeout});
                     } else {
                         throw error;
                     }
@@ -169,28 +172,29 @@ export class MiniIframeRPC {
         });
     }
 
-    private formatError(err : any)  {
-        if (!(err instanceof Error)) {
-            return err;
-        }
-        // message is non-enumerable, so it must be explicitly extracted
+    private serializeError(err : Error)  {
         const {message, name, stack} = err;
 
-        return JSON.stringify({message, name, stack});
-    }
+        return Object.assign({message, stack, originalName: name}, err);
+    }    
 
     private async handleRequest (messageBody: RequestMessageBody, messageSource: Window, messageOrigin: string) {
         const callId = messageBody.callId;
         const procedureName = messageBody.procedureName;
         const argumentList = messageBody.argumentList;
         const responseOrigin = !messageOrigin || messageOrigin === "null" ? null : messageOrigin;
-        const sendError = (ex : Error | string) => this.sendMessage(
+        const sendError = (error: any) => {
+            const isError = error instanceof Error;
+            this.sendMessage(
                 messageSource,
                 responseOrigin,
                 {
-                    contents: "exception",
+                    contents: "error",
                     callId,
-                    exception: this.formatError(ex)});
+                    isErrorInstance: isError,                    
+                    errorValue: isError ? this.serializeError(error) : error
+                });
+            }
         if (this.registeredProcedures.has(procedureName)) {
             try {
                 return Promise.resolve(
@@ -210,7 +214,7 @@ export class MiniIframeRPC {
                 return sendError(ex);
             }
         } else {
-            return sendError(`Procedure not found: ${procedureName}`);
+            return sendError(new Error(`Procedure not found: ${procedureName}`));
         }
     }
 
@@ -219,8 +223,9 @@ export class MiniIframeRPC {
         if (callbackFunctions) {                        
             if (response.contents === "result") {
                 callbackFunctions.result(response.result);
-            } else if (response.contents === "exception") {
-                callbackFunctions.exception(response.exception);
+            } else if (response.contents === "error") {
+                const errorObject = response.isErrorInstance ? deserializeError(response.errorValue) : response.errorValue;
+                callbackFunctions.error(errorObject);
             }        
         } else {
             this.internalEventCallback("onUnexpectedResponse", response);

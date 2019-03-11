@@ -96,7 +96,7 @@ describe('mini-iframe-rpc', function() {
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response after 100 ms'));
+                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
                 done();
             }
         );
@@ -111,7 +111,7 @@ describe('mini-iframe-rpc', function() {
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response after 100 ms'));
+                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
                 done();
             }
         );
