@@ -142,5 +142,46 @@ describe('mini-iframe-rpc', function() {
         });
     });
 
- 
+     it('calls onClose event callback on close()', function(done) {
+        ready.then(() => {
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+                'onClose': () => {
+                    done();
+                }
+            }});
+            window.parentRPC.close();
+        });
+    });
+
+    it('calls onUnexpectedResponse handler on reception of responses without registered callbacks', function(done) {
+        ready.then(() => {
+            let listenToOnReceive = false;
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+                'onReceive': (postMessage) => {
+                    // change callId so response cannot be matched with outgoing call.
+                    if (!listenToOnReceive) {
+                        return;
+                    }
+                    postMessage.data.message.callId = "asdf";
+                    listenToOnReceive = false;
+                },
+                'onUnexpectedResponse': (response) => {
+                     expect(response).toEqual({
+                        contents: 'result',
+                        callId: 'asdf',
+                        result: true
+                    });
+                    done();
+                }
+            }});
+            onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
+                listenToOnReceive = true;
+                parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
+                    done(new Error('onReceive should be called before RPC call completes'));
+                })
+            });
+        });
+    });
+
+
 });
