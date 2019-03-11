@@ -105,11 +105,9 @@ describe('mini-iframe-rpc', function() {
     it('times out with invalid origin passed to invoke()', function(done) {
         ready.then((child) => {
             // re-init parentRPC to use timeout
-            window.parentRPC.close();
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
-            return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme");
+            return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme", [], {'timeout': 100});
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
