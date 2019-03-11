@@ -88,7 +88,7 @@ describe('mini-iframe-rpc', function() {
             window.parentRPC.close();
             // the initial origin whitelist must be configured properly for the 'ready' event
             // to be received, so it's broken later.
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100, 'originWhitelist': originWhitelist});
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}, 'originWhitelist': originWhitelist});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             originWhitelist.push("https://not.my.origin:69");
@@ -106,7 +106,7 @@ describe('mini-iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100});
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
             return onScriptRun('childRPC.register("callme", () => window.isChild);');
         }).then(() => {
             return window.parentRPC.invoke(childWindow(), "https://not.my.origin:69", "callme");

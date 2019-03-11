@@ -153,7 +153,7 @@ describe('mini-iframe-rpc', function() {
         ready.then((child) => {
             // re-init parentRPC to use timeout
             window.parentRPC.close();
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100});
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
             onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
         }).then(() => parentRPC.invoke(childWindow(), null, "callme")
@@ -230,7 +230,7 @@ describe('mini-iframe-rpc', function() {
             () => {
                 // re-init parentRPC to use timeout
                 window.parentRPC.close();
-                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'timeout': 100});
+                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
                 onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);

@@ -8,7 +8,7 @@ module.exports = function(config) {
     frameworks: ['jasmine'],
     port: 9876,
     colors: true,
-    singleRun: true,
+    singleRun: false,
     reporters: ['mocha'],
     files: [
       `${webpackConfig.output.path}/${webpackConfig.output.filename}`,
