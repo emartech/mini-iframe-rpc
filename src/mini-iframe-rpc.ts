@@ -110,7 +110,7 @@ export class MiniIframeRPC {
                     if (error === timeoutMarker) {
                         // retry?
                         // when retry exhaused raise timeout error
-                        throw new Error(`Timeout waiting for RPC response after ${this.config.defaultInvocationOptions.timeout} ms`);
+                        throw new Error(`Timeout waiting for RPC response after ${options.timeout} ms`);
                     } else {
                         throw error;
                     }

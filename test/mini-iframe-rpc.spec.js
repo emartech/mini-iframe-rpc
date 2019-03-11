@@ -151,16 +151,13 @@ describe('mini-iframe-rpc', function() {
 
     it('does not receive messages after close() called', function(done) {
         ready.then((child) => {
-            // re-init parentRPC to use timeout
-            window.parentRPC.close();
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
             onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
-        }).then(() => parentRPC.invoke(childWindow(), null, "callme")
+        }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {'timeout': 100})
         ).then((result) => expect(result).toEqual('child')
         ).then(() => window.parentRPC.invoke(childWindow(), null, 'close')
             // after child RPC closed, same call results in timeout
-        ).then(() => parentRPC.invoke(childWindow(), null, "callme")
+        ).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {'timeout': 100})
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -228,16 +225,13 @@ describe('mini-iframe-rpc', function() {
     it('gracefully handles timeouts in remote procedure', function(done) {
         ready.then(
             () => {
-                // re-init parentRPC to use timeout
-                window.parentRPC.close();
-                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 100}});
                 onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);
                     });`
                 );
             }
-        ).then(() => parentRPC.invoke(childWindow(), null, "err")
+        ).then(() => parentRPC.invoke(childWindow(), null, "err", [], {'timeout': 100})
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
