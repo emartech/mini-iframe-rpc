@@ -127,7 +127,8 @@ describe('mini-iframe-rpc', function() {
             parentRPC.invoke(child, null, "unregistered_function").then(
                 (result) => done(new Error('Promise should not be resolved')),
                 (reject) => {
-                    expect(reject).toEqual(new Error('Procedure not found: unregistered_function'));
+                    expect(reject.message).toEqual("Remote procedure 'unregistered_function' not registered in remote RPC instance.");
+                    expect(reject.name).toEqual("ProcedureNotFoundError");
                     done();
                 });
         });
@@ -144,7 +145,8 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved (result: '+result+')')),
             (reject) => {
-                expect(reject).toEqual(new Error('Procedure not found: callme'));
+                expect(reject.message).toEqual("Remote procedure 'callme' not registered in remote RPC instance.");
+                expect(reject.name).toEqual("ProcedureNotFoundError");
                 done();
             });
     });

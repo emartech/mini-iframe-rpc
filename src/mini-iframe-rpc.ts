@@ -214,7 +214,7 @@ export class MiniIframeRPC {
                 return sendError(ex);
             }
         } else {
-            return sendError(new Error(`Procedure not found: ${procedureName}`));
+            return sendError(new ProcedureNotFoundError({procedureName}));
         }
     }
 
