@@ -1,7 +1,7 @@
 
 /* tslint:disable no-any no-unsafe-any */
 
-import {deserializeRemoteError, EvaluationError, MiniIframeError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
+import {deserializeRemoteError, EvaluationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 
 const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
@@ -59,8 +59,8 @@ const timeoutMarker = {};
 
 export class MiniIframeRPC {
     private config: InitParameters;
-    private callbacks: Map<string, CallbackFunctions> = new Map<string, CallbackFunctions>();
-    private registeredProcedures: Map<string, ProcedureImplementation> = new Map<string, ProcedureImplementation>();
+    private callbacks: {[key:string]:CallbackFunctions} = {};
+    private registeredProcedures:{[key:string]: ProcedureImplementation} = {};
 
     constructor(initParameters?: InitParameters) {
         this.config = {
@@ -79,9 +79,9 @@ export class MiniIframeRPC {
     register(procedureName: string, implementation?: ProcedureImplementation): void {
         this.internalEventCallback("onRegister", procedureName, implementation)
         if (implementation) {
-            this.registeredProcedures.set(procedureName, implementation);
+            this.registeredProcedures[procedureName] = implementation;
         } else {
-            this.registeredProcedures.delete(procedureName);
+            delete this.registeredProcedures[procedureName];
         }
     }
 
@@ -96,15 +96,15 @@ export class MiniIframeRPC {
         let resultPromise: Promise<any> = this.sendMessage(targetWindow, targetOrigin, messageBody).then(() => new Promise((resolve, reject) => {
             const callbacks : CallbackFunctions = {
                 result: (result : any) => {
-                    this.callbacks.delete(callId);
+                    delete this.callbacks[callId];
                     resolve(result);
                 },
                 error: (err : any) => {
-                    this.callbacks.delete(callId);
+                    delete this.callbacks[callId];
                     reject(err);
                 }
             };
-            this.callbacks.set(callId, callbacks);
+            this.callbacks[callId] = callbacks;
         }));
         if (options.timeout > 0) {
             resultPromise = this.timeboxPromise(resultPromise, options.timeout).then(
@@ -149,7 +149,7 @@ export class MiniIframeRPC {
 
     private getNextCallId () {
         let randomId : string | null = null;
-        while(!randomId || this.callbacks.has(randomId)) {
+        while(!randomId || this.callbacks[randomId]) {
             randomId = `cb${Math.random().toString(RANDOM_BASE).replace(/[^a-z]+/g, '').substr(0, CALLID_LENGTH)}`;
         }
 
@@ -189,10 +189,10 @@ export class MiniIframeRPC {
                     errorValue: isError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
                 });
             }
-        if (this.registeredProcedures.has(procedureName)) {
+        if (this.registeredProcedures[procedureName]) {
             try {
                 return Promise.resolve(
-                    this.registeredProcedures.get(procedureName)!.apply(
+                    this.registeredProcedures[procedureName].apply(
                         {messageBody, messageSource, messageOrigin},
                         argumentList)).then(
                             result => this.sendMessage(
@@ -216,7 +216,7 @@ export class MiniIframeRPC {
     }
 
     private handleResponse(response: MessageBody) {
-        const callbackFunctions = this.callbacks.get(response.callId);
+        const callbackFunctions = this.callbacks[response.callId];
         if (callbackFunctions) {                        
             if (response.contents === "result") {
                 callbackFunctions.result(response.result);

@@ -38,6 +38,7 @@
     "karma-jasmine": "^2.0.1",
     "karma-mocha-reporter": "^2.2.5",
     "ts-loader": "^5.3.3",
+    "tslint": "^5.12.1",
     "tslint-config-prettier": "^1.18.0",
     "tslint-config-standard": "^8.0.1",
     "tslint-etc": "^1.2.12",
@@ -51,9 +52,5 @@
     "sourceMap": false,
     "instrument": false
   },
-  "dependencies": {
-    "es6-map": "^0.1.5",
-    "tslint": "^5.12.1",
-    "typescript-collections": "^1.3.2"
-  }
+  "dependencies": {}
 }
