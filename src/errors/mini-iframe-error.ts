@@ -1,11 +1,17 @@
 export class MiniIframeError extends Error {
-    
-    timestamp = +(new Date());
 
-    constructor(message?: string) {
+    timestamp:number;
+
+    // tslint:disable-next-line:no-any
+    constructor(message?: string, state?: any) {
         super(message);
+        this.timestamp =  +(new Date());
+        if (state) {
+            Object.assign(this, state);
+        }
         // see: typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain
         this.name = MiniIframeError.name; // stack traces display correctly now 
+        
     }
 }

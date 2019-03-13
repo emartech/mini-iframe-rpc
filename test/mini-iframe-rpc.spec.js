@@ -178,7 +178,9 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('err'));
+                expect(reject.name).toEqual('EvaluationError');
+                expect(reject.cause.name).toEqual('Error');
+                expect(reject.message).toEqual('err');
                 done();
             });
     });

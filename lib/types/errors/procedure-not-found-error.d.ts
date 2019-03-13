@@ -1,5 +1,5 @@
-import { MiniIframeError } from './mini-iframe-error';
-export declare class ProcedureNotFoundError extends MiniIframeError {
+import { RemoteError } from './remote-error';
+export declare class ProcedureNotFoundError extends RemoteError {
     procedureName: string;
     constructor(state: Partial<ProcedureNotFoundError>);
 }

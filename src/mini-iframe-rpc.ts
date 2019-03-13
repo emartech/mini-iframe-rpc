@@ -1,7 +1,7 @@
 
 /* tslint:disable no-any no-unsafe-any */
 
-import {deserializeError, ProcedureNotFoundError, RemoteEvaluationError, TimeoutError} from './errors';
+import {deserializeRemoteError, EvaluationError, MiniIframeError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 
 const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
@@ -24,7 +24,7 @@ interface ErrorMessageBody {
     contents: "error";
     callId: string;
     isErrorInstance: boolean;
-    errorValue: any;
+    errorValue: RemoteError;
 }
 
 type MessageBody = RequestMessageBody | ResultMessageBody | ErrorMessageBody;
@@ -170,21 +170,15 @@ export class MiniIframeRPC {
                 reject(e);
             }
         });
-    }
-
-    private serializeError(err : Error)  {
-        const {message, name, stack} = err;
-
-        return Object.assign({message, stack, originalName: name}, err);
-    }    
+    }     
 
     private async handleRequest (messageBody: RequestMessageBody, messageSource: Window, messageOrigin: string) {
         const callId = messageBody.callId;
         const procedureName = messageBody.procedureName;
         const argumentList = messageBody.argumentList;
         const responseOrigin = !messageOrigin || messageOrigin === "null" ? null : messageOrigin;
-        const sendError = (error: any) => {
-            const isError = error instanceof Error;
+        const sendError = (rejectOrError: any, exceptionName?:string) => {
+            const isError = rejectOrError instanceof Error;
             this.sendMessage(
                 messageSource,
                 responseOrigin,
@@ -192,7 +186,7 @@ export class MiniIframeRPC {
                     contents: "error",
                     callId,
                     isErrorInstance: isError,                    
-                    errorValue: isError ? this.serializeError(error) : error
+                    errorValue: isError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
                 });
             }
         if (this.registeredProcedures.has(procedureName)) {
@@ -208,10 +202,13 @@ export class MiniIframeRPC {
                                     contents: "result",
                                     callId,
                                     result
-                                }).catch(sendError),
+                                }).catch(error => {
+                                    sendError(error, SendMessageError.name)
+                                }),
+                            // send 'error' type message with rejection value
                             sendError);
             } catch (ex) {
-                return sendError(ex);
+                return sendError(ex, EvaluationError.name);
             }
         } else {
             return sendError(new ProcedureNotFoundError({procedureName}));
@@ -224,7 +221,7 @@ export class MiniIframeRPC {
             if (response.contents === "result") {
                 callbackFunctions.result(response.result);
             } else if (response.contents === "error") {
-                const errorObject = response.isErrorInstance ? deserializeError(response.errorValue) : response.errorValue;
+                const errorObject = response.isErrorInstance ? deserializeRemoteError(response.errorValue) : response.errorValue;
                 callbackFunctions.error(errorObject);
             }        
         } else {
