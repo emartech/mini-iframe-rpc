@@ -28,7 +28,7 @@ describe('retries', function() {
                     <script src="${document.querySelectorAll('script[src*="mini-iframe-rpc.js"]')[0].src}"><\/script>
                     <script>
                         window.isChild = "child";
-                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
+                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({resultCacheCapacity: 0});
                         window.childRPC.register("appendScript", (script) => {
                             const element = document.createElement('script');
                             element.innerHTML = script;
@@ -165,5 +165,82 @@ describe('retries', function() {
                     done();
                 });
     });
+
+    it('non retriable errors fail after first attempt', function(done) {
+        const retryLimit = 3;
+        ready.then(() => parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit})
+            ).then(
+                (result) => done(new Error('Promise should not be resolved')),
+                (reason) => {
+                    expect(reason.cause.name).toEqual('ProcedureNotFoundError');
+                    expect(reason.previousRejectReasons.length).toEqual(0);
+                    done();
+                });
+    });
+
+
+    it('cached results only computed once', function(done) {
+        const retryLimit = 3;
+        ready.then(() => {
+            onScriptRun(`
+                window.childRPC.close();
+                window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({resultCacheCapacity: 20});
+                (function() {
+                    let counter=0;
+                    childRPC.register("callme", () => Promise.reject(counter++));
+                })();`);
+            }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit})
+            ).then(
+                (result) => done(new Error('Promise should not be resolved')),
+                (reject) => {
+                    expect(reject.name).toEqual('InvocationError');
+                    expect(reject.procedureName).toEqual('callme');
+                    expect(reject.cause).toEqual(0);
+                    expect(reject.previousRejectReasons.length).toEqual(retryLimit);
+                    for (let i = 0; i < reject.previousRejectReasons.length; i++) {
+                        expect(reject.previousRejectReasons[i]).toEqual(0);
+                    }
+                    done();
+                });
+    });
+
+    it('cache eviction internal event callback called on eviction', function(done) {
+        let listen = false;
+        const retryLimit = 3;
+        const resultCacheCapacity = 2;
+        let onEvictCalled = false;
+        ready.then(() => {
+            parentRPC.register("onEvict", (evictedResult) => {
+                if (!listen) {
+                    return;
+                }
+                expect(evictedResult).toEqual(0);
+                onEvictCalled = true;
+            });
+            onScriptRun(`
+                window.childRPC.close();
+                window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({
+                    'resultCacheCapacity': ${resultCacheCapacity},
+                    'eventCallbacks': {
+                        'onResultCacheEviction': (_callId, evictedResult) => {
+                            window.childRPC.invoke(window.parent, null, 'onEvict', [evictedResult]);
+                        }}});
+                (function() {
+                    let counter=0;
+                    childRPC.register("callme", () => Promise.resolve(counter++));
+                })();`);
+            }).then(() => {
+                var results = [];
+                listen = true;
+                for (let i = 0; i < (resultCacheCapacity + 1); i++) {
+                    results.push(parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit}));
+                }
+                listen = false;
+                //expect(onEvictCalled).toEqual(true);
+                Promise.all(results).then(r => expect(r).toEqual([0,0,1]));
+                done();
+            }); 
+    });
+
 
 });

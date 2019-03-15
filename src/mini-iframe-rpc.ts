@@ -2,8 +2,8 @@
 /* tslint:disable no-any no-unsafe-any */
 
 import {deserializeRemoteError, EvaluationError, InvocationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
-import {ResponseCache} from "./response-cache";
-export {ResponseCache}; // so unit tests can access ResponseCache
+import {DEFAULT_RESULT_CACHE_CAPACITY, ResultCache} from "./result-cache";
+export {ResultCache}; // so unit tests can access ResponseCache
 
 interface RequestMessageBody  {
     contents: "request";
@@ -32,7 +32,7 @@ export interface InvocationOptions {
     retryLimit: number;
 }
 
-type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry';
+type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry' | 'onResultCacheEviction';
 
 // Optional callbacks for internal events useful for debugging and testing
 export type InternalEventCallbacks = {
@@ -44,6 +44,7 @@ export interface InitParameters {
     originWhitelist: string[];
     defaultInvocationOptions: InvocationOptions;
     eventCallbacks: Partial<InternalEventCallbacks>;
+    resultCacheCapacity: number;
 }
 
 interface CallbackFunctions {
@@ -52,6 +53,8 @@ interface CallbackFunctions {
 }
 
 type ProcedureImplementation = (...args: any[]) => any;
+
+type ProcedureInvocationContext = {requestMessageBody: RequestMessageBody, messageSource: Window, messageOrigin: string};
 
 const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
@@ -65,14 +68,22 @@ export class MiniIframeRPC {
     private config: InitParameters;
     private callbacks: {[key:string]:CallbackFunctions} = {};
     private registeredProcedures:{[key:string]: ProcedureImplementation} = {};
+    private resultCache:ResultCache;
 
     constructor(initParameters?: InitParameters) {
         this.config = {
             windowRef: initParameters && initParameters.windowRef || window,
             originWhitelist: initParameters && initParameters.originWhitelist || [],
-            defaultInvocationOptions: Object.assign({}, DEFAULT_INVOCATION_OPTIONS, initParameters && initParameters.defaultInvocationOptions || {}),
-            eventCallbacks: initParameters && initParameters.eventCallbacks || {}
+            defaultInvocationOptions: Object.assign({}, DEFAULT_INVOCATION_OPTIONS, initParameters && initParameters.defaultInvocationOptions || {}),            
+            eventCallbacks: initParameters && initParameters.eventCallbacks || {},
+            resultCacheCapacity: initParameters && typeof initParameters.resultCacheCapacity === 'number' ? initParameters.resultCacheCapacity : DEFAULT_RESULT_CACHE_CAPACITY
         };
+        this.resultCache = new ResultCache({
+            capacity: this.config.resultCacheCapacity,
+            evictionCallback: (callId, result) => {
+                this.internalEventCallback("onResultCacheEviction", callId, result);
+            }
+        });
         // attach listener
         this.config.windowRef.addEventListener("message", this.recv);
     }        
@@ -218,17 +229,17 @@ export class MiniIframeRPC {
                 reject(e);
             }
         });
-    }     
+    }        
 
-    private async handleRequest (messageBody: RequestMessageBody, messageSource: Window, messageOrigin: string) {
-        const callId = messageBody.callId;
-        const procedureName = messageBody.procedureName;
-        const argumentList = messageBody.argumentList;
-        const responseOrigin = !messageOrigin || messageOrigin === "null" ? null : messageOrigin;
+    private async handleRequest (context:ProcedureInvocationContext) {
+        const callId = context.requestMessageBody.callId;
+        const procedureName = context.requestMessageBody.procedureName;
+        const argumentList = context.requestMessageBody.argumentList;
+        const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
             const isError = rejectOrError instanceof Error;
             this.sendMessage(
-                messageSource,
+                context.messageSource,
                 responseOrigin,
                 {
                     contents: "error",
@@ -236,28 +247,32 @@ export class MiniIframeRPC {
                     isErrorInstance: isError,                    
                     errorValue: isError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
                 });
+        };
+        const getResult = () => {
+            if (this.resultCache.hasCachedResult(callId)) {
+                return this.resultCache.getCachedResult(callId);
             }
-        if (this.registeredProcedures[procedureName]) {
-            try {
-                return Promise.resolve(
-                    this.registeredProcedures[procedureName].apply(
-                        {messageBody, messageSource, messageOrigin},
-                        argumentList)).then(
-                            result => this.sendMessage(
-                                messageSource,
+            const resultPromise = new Promise((resolve) => {
+                resolve(this.registeredProcedures[procedureName].apply(
+                    context,
+                    argumentList));
+                });
+            this.resultCache.setCachedResult(callId, resultPromise);
+
+            return resultPromise;
+        };
+        if (this.registeredProcedures[procedureName]) {            
+            return getResult()
+                        .then(
+                            (result?:any) => this.sendMessage(
+                                context.messageSource,
                                 responseOrigin,
                                 {
                                     contents: "result",
                                     callId,
                                     result
-                                }).catch(error => {
-                                    sendError(error, SendMessageError.name)
-                                }),
-                            // send 'error' type message with rejection value
-                            sendError);
-            } catch (ex) {
-                return sendError(ex, EvaluationError.name);
-            }
+                                }).catch(error => sendError(error, SendMessageError.name)),
+                            (error?:any) => sendError(error, EvaluationError.name));            
         } else {
             return sendError(new ProcedureNotFoundError({procedureName}));
         }
@@ -282,12 +297,12 @@ export class MiniIframeRPC {
         if ((this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) &&
             messageEvent.data && messageEvent.data.type === RPC_MESSAGE_TYPE) {
             this.internalEventCallback("onReceive", messageEvent);    
-            const messageBody : MessageBody = messageEvent.data.message as MessageBody;
-            if (messageBody.contents === "request") {
-                return this.handleRequest(messageBody, messageEvent.source as Window, messageEvent.origin);
+            const requestMessageBody : MessageBody = messageEvent.data.message as MessageBody;
+            if (requestMessageBody.contents === "request") {
+                return this.handleRequest({requestMessageBody, messageSource: messageEvent.source as Window, messageOrigin: messageEvent.origin});
             }
 
-            return this.handleResponse(messageBody);                        
+            return this.handleResponse(requestMessageBody);                        
         }
     }
 
