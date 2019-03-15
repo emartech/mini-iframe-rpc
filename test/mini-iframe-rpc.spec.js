@@ -127,8 +127,8 @@ describe('mini-iframe-rpc', function() {
             parentRPC.invoke(child, null, "unregistered_function").then(
                 (result) => done(new Error('Promise should not be resolved')),
                 (reject) => {
-                    expect(reject.message).toEqual("Remote procedure 'unregistered_function' not registered in remote RPC instance.");
-                    expect(reject.name).toEqual("ProcedureNotFoundError");
+                    expect(reject.cause.message).toEqual("Remote procedure 'unregistered_function' not registered in remote RPC instance.");
+                    expect(reject.cause.name).toEqual("ProcedureNotFoundError");
                     done();
                 });
         });
@@ -145,8 +145,10 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved (result: '+result+')')),
             (reject) => {
-                expect(reject.message).toEqual("Remote procedure 'callme' not registered in remote RPC instance.");
-                expect(reject.name).toEqual("ProcedureNotFoundError");
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.procedureName).toEqual('callme');
+                expect(reject.cause.name).toEqual("ProcedureNotFoundError");
+                expect(reject.cause.message).toEqual("Remote procedure 'callme' not registered in remote RPC instance.");
                 done();
             });
     });
@@ -163,7 +165,10 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.procedureName).toEqual('callme');
+                expect(reject.cause.name).toEqual('TimeoutError');
+                expect(reject.cause.message).toEqual('Timeout after 100 ms.');
                 done();
             }
         );
@@ -178,21 +183,23 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject.name).toEqual('EvaluationError');
-                expect(reject.cause.name).toEqual('Error');
-                expect(reject.message).toEqual('err');
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.cause.name).toEqual('EvaluationError');
+                expect(reject.cause.cause.name).toEqual('Error');
+                expect(reject.cause.message).toEqual('err');
                 done();
             });
     });
 
     it('gracefully handles rejected promise in remote procedure', function(done) {
         ready.then(
-            () => onScriptRun(`childRPC.register("err", () => Promise.reject("reject"));`)
+            () => onScriptRun(`childRPC.register("err", () => Promise.reject("rejectionReason"));`)
         ).then(() => parentRPC.invoke(childWindow(), null, "err")
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual('reject');
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.cause).toEqual("rejectionReason");
                 done();
             });
     });
@@ -234,7 +241,9 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "err" after 100 ms'));
+                expect(reject.procedureName).toEqual("err");
+                expect(reject.cause.name).toEqual('TimeoutError');
+                expect(reject.cause.message).toEqual("Timeout after 100 ms.");
                 done();
             });
     });

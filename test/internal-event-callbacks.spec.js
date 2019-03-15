@@ -1,4 +1,4 @@
-describe('mini-iframe-rpc', function() {
+describe('internal-event-callbacks', function() {
     let ready;
     window.isParent = "parent";
 

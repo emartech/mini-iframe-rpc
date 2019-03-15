@@ -1,3 +1,5 @@
+import { ResponseCache } from "./response-cache";
+export { ResponseCache };
 export interface InvocationOptions {
     timeout: number;
     retryLimit: number;
@@ -21,6 +23,7 @@ export declare class MiniIframeRPC {
     register(procedureName: string, implementation?: ProcedureImplementation): void;
     invoke(targetWindow: Window, targetOrigin: string | null, procedureName: string, argumentList?: any[], invocationOptions?: InvocationOptions): Promise<any>;
     close(): void;
+    private requestWithRetry;
     private internalEventCallback;
     private timeboxPromise;
     private getNextCallId;
@@ -29,5 +32,4 @@ export declare class MiniIframeRPC {
     private handleResponse;
     private recv;
 }
-export {};
 //# sourceMappingURL=mini-iframe-rpc.d.ts.map

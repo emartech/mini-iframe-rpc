@@ -1,11 +1,12 @@
 import {EvaluationError} from './evaluation-error';
+import {InvocationError} from './invocation-error';
 import {MiniIframeError} from './mini-iframe-error';
 import {ProcedureNotFoundError} from './procedure-not-found-error';
 import {errorToJSON, RemoteError, RemoteErrorCause} from './remote-error';
 import {SendMessageError} from './send-message-error';
 import {TimeoutError} from './timeout-error';
 
-export {MiniIframeError, ProcedureNotFoundError, EvaluationError, TimeoutError, SendMessageError, RemoteError};
+export {MiniIframeError, ProcedureNotFoundError, EvaluationError, TimeoutError, SendMessageError, RemoteError, InvocationError};
 
 type RemoteErrorConstructor = new (state: Partial<RemoteError>) => RemoteError;
 

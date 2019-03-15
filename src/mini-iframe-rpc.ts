@@ -1,11 +1,9 @@
 
 /* tslint:disable no-any no-unsafe-any */
 
-import {deserializeRemoteError, EvaluationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
-
-const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
-const RANDOM_BASE = 36;
-const CALLID_LENGTH = 8;
+import {deserializeRemoteError, EvaluationError, InvocationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
+import {ResponseCache} from "./response-cache";
+export {ResponseCache}; // so unit tests can access ResponseCache
 
 interface RequestMessageBody  {
     contents: "request";
@@ -49,13 +47,19 @@ export interface InitParameters {
 }
 
 interface CallbackFunctions {
-    result: (result: any) => void,
-    error: (error: any) => void
+    resolve: (result?: any) => void,
+    reject: (error?: any) => void
 }
 
 type ProcedureImplementation = (...args: any[]) => any;
 
-const timeoutMarker = {};
+const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
+const RANDOM_BASE = 36;
+const CALLID_LENGTH = 8;
+const DEFAULT_INVOCATION_OPTIONS:InvocationOptions = {
+    timeout: 200,
+    retryLimit: 0
+}
 
 export class MiniIframeRPC {
     private config: InitParameters;
@@ -66,10 +70,7 @@ export class MiniIframeRPC {
         this.config = {
             windowRef: initParameters && initParameters.windowRef || window,
             originWhitelist: initParameters && initParameters.originWhitelist || [],
-            defaultInvocationOptions: initParameters && initParameters.defaultInvocationOptions || {
-                timeout: 0,
-                retryLimit: 0
-            },
+            defaultInvocationOptions: Object.assign({}, DEFAULT_INVOCATION_OPTIONS, initParameters && initParameters.defaultInvocationOptions || {}),
             eventCallbacks: initParameters && initParameters.eventCallbacks || {}
         };
         // attach listener
@@ -86,47 +87,93 @@ export class MiniIframeRPC {
     }
 
     invoke (targetWindow: Window, targetOrigin: string | null, procedureName: string, argumentList?: any[], invocationOptions?: InvocationOptions): Promise<any> {
-        const options = invocationOptions || this.config.defaultInvocationOptions;
+        const options = Object.assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
         const callId = this.getNextCallId();
-        const messageBody: RequestMessageBody = {
+        const requestMessageBody: RequestMessageBody = {
             contents: "request",
             callId,
             procedureName,
             argumentList: (argumentList || [])};
-        let resultPromise: Promise<any> = this.sendMessage(targetWindow, targetOrigin, messageBody).then(() => new Promise((resolve, reject) => {
-            const callbacks : CallbackFunctions = {
-                result: (result : any) => {
-                    delete this.callbacks[callId];
-                    resolve(result);
-                },
-                error: (err : any) => {
-                    delete this.callbacks[callId];
-                    reject(err);
-                }
-            };
-            this.callbacks[callId] = callbacks;
-        }));
-        if (options.timeout > 0) {
-            resultPromise = this.timeboxPromise(resultPromise, options.timeout).then(
-                result => result,
-                error => {
-                    if (error === timeoutMarker) {
-                        // retry?
-                        // when retry exhaused raise timeout error
-                        throw new TimeoutError({procedureName, timeoutMilliSeconds: options.timeout});
-                    } else {
-                        throw error;
-                    }
-                }
-            );
-        }
 
-        return resultPromise;
+        return this.requestWithRetry(targetWindow, targetOrigin, requestMessageBody, options);
     }
 
     close() {
         this.internalEventCallback("onClose");
         this.config.windowRef.removeEventListener("message", this.recv);
+    }
+
+    private requestWithRetry(targetWindow: Window, targetOrigin: string | null, requestMessageBody:RequestMessageBody, options: InvocationOptions):Promise<any> {
+        
+        let requestCount = 0;
+        let failureCount = 0;        
+        let finalResolve:(result?: any) => void = () => void 0;
+        let finalReject:(error?: any) => void = () => void 0;
+        let completed = false;
+        const previousRejectReasons:any[] = [];        
+        
+        const isErrorRetriable = (error: any) => {
+            if (options.timeout <= 0 || options.retryLimit < 1) {
+                return false;
+            }
+            if (error instanceof ProcedureNotFoundError) {
+                return false;
+            }
+
+            return true;
+        };
+
+        const makeRequest = async () => {
+            await this.sendMessage(targetWindow, targetOrigin, requestMessageBody);
+
+            return new Promise((resolve, reject) => {
+                this.callbacks[requestMessageBody.callId] = { resolve, reject };
+            });
+        }
+
+        const handleResolve = (result?: any) => {
+            // first successful request immediately resolves the invocation promise
+            completed = true;
+            finalResolve(result);
+        }
+
+        const handleReject = (reason?: any) => {
+            failureCount += 1;
+            // If request has since been completed, do nothing
+            // Retry request or fail permanently if no outstanding requests still in flight
+            if (!completed && failureCount === requestCount) {
+
+                if (isErrorRetriable(reason) && requestCount < (options.retryLimit + 1)) {
+                    previousRejectReasons.push(reason);
+                    makeAttempt();
+                // If error is non-retriable and there are no unanswered requests, give up.
+                } else {
+                    completed = true;
+                    finalReject(new InvocationError(requestMessageBody.procedureName, reason, previousRejectReasons));
+                }
+            }
+            // if there are still outstanding requests, wait for them to succeed or fail.
+            // TODO: call internal eventCallback
+        };
+
+        const makeAttempt = () => {
+            requestCount += 1;
+            let responsePromise = makeRequest();
+            if (options.timeout > 0) {
+                responsePromise = this.timeboxPromise(responsePromise, options.timeout);
+            }
+
+            return responsePromise.then(handleResolve, handleReject);
+        };
+
+        const returnValue = new Promise((resolve, reject) => {
+            finalResolve = resolve;
+            finalReject = reject;
+        });
+        // initial attempt
+        makeAttempt();
+
+        return returnValue;
     }
 
     private internalEventCallback(internalEventCallback: InternalEventCallbackType, ...args: any[]) {
@@ -136,13 +183,13 @@ export class MiniIframeRPC {
         }
     }
 
-    private timeboxPromise(originalPromise: Promise<any>, timeoutMilliseconds: number): Promise<any> {
+    private timeboxPromise(originalPromise: Promise<any>, timeoutMilliSeconds: number): Promise<any> {
         return Promise.race([
             originalPromise,
             new Promise((_resolve, reject) => {
                 this.config.windowRef.setTimeout(
-                    () => reject(timeoutMarker),
-                    timeoutMilliseconds);
+                    () => reject(new TimeoutError({timeoutMilliSeconds})),
+                    timeoutMilliSeconds);
             })
         ]);
     }   
@@ -217,12 +264,13 @@ export class MiniIframeRPC {
 
     private handleResponse(response: MessageBody) {
         const callbackFunctions = this.callbacks[response.callId];
-        if (callbackFunctions) {                        
+        if (callbackFunctions) {
+            delete this.callbacks[response.callId];                        
             if (response.contents === "result") {
-                callbackFunctions.result(response.result);
+                callbackFunctions.resolve(response.result);
             } else if (response.contents === "error") {
                 const errorObject = response.isErrorInstance ? deserializeRemoteError(response.errorValue) : response.errorValue;
-                callbackFunctions.error(errorObject);
+                callbackFunctions.reject(errorObject);
             }        
         } else {
             this.internalEventCallback("onUnexpectedResponse", response);

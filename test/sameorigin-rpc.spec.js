@@ -1,4 +1,4 @@
-describe('mini-iframe-rpc', function() {
+describe('mini-iframe-rpc (same-origin iframe)', function() {
     let ready;
     window.isParent = "parent";
 
@@ -96,7 +96,10 @@ describe('mini-iframe-rpc', function() {
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.procedureName).toEqual('callme');
+                expect(reject.cause.name).toEqual('TimeoutError');
+                expect(reject.cause.message).toEqual('Timeout after 100 ms.');
                 done();
             }
         );
@@ -111,7 +114,10 @@ describe('mini-iframe-rpc', function() {
         }).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject).toEqual(new Error('Timeout waiting for RPC response to invocation of "callme" after 100 ms'));
+                expect(reject.name).toEqual('InvocationError');
+                expect(reject.procedureName).toEqual('callme');
+                expect(reject.cause.name).toEqual('TimeoutError');
+                expect(reject.cause.message).toEqual('Timeout after 100 ms.');
                 done();
             }
         );
