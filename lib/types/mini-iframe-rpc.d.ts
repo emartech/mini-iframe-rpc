@@ -4,7 +4,7 @@ export interface InvocationOptions {
     timeout: number;
     retryLimit: number;
 }
-declare type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose';
+declare type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry';
 export declare type InternalEventCallbacks = {
     [key in InternalEventCallbackType]: (...args: any[]) => void;
 };

@@ -76,4 +76,94 @@ describe('retries', function() {
                 });
     });
 
+    it('calls internal event callback on retry', function(done) {
+        const retryLimit = 3;
+        const requestMessageBodies = [];
+        ready.then(() => {
+            window.parentRPC.close();
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+                    'onRequestRetry': (reason, previousRejectReasons, requestMessageBody) => {
+                        expect(reason).toEqual(retryLimit - previousRejectReasons.length);
+                        requestMessageBodies.forEach(r => expect(requestMessageBody).toEqual(r));
+                        requestMessageBodies.push(requestMessageBody);
+                    }}});
+            onScriptRun(`
+                (function() {
+                    let counter=${retryLimit};
+                    childRPC.register("callme", () => Promise[counter > 0 ? 'reject' : 'resolve'](counter--));
+                })();`);
+            }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit})
+            ).then(
+                (result) => {
+                    expect(requestMessageBodies.length).toEqual(retryLimit);
+                    expect(result).toEqual(0);
+                    done();
+                });
+    });
+
+    it('attempted when request times out', function(done) {
+        const retryLimit = 3;
+        const requestMessageBodies = [];
+        ready.then(() => {
+            window.parentRPC.close();
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+                    'onRequestRetry': (reason, previousRejectReasons, requestMessageBody) => {
+                        expect(reason.name).toEqual('TimeoutError');
+                        expect(reason.message).toEqual('Timeout after 20 ms.');
+                        requestMessageBodies.forEach(r => expect(requestMessageBody).toEqual(r));
+                        requestMessageBodies.push(requestMessageBody);
+                    }}});
+            onScriptRun(`
+                (function() {
+                    let counter=${retryLimit}+1;
+                    childRPC.register("callme", () => {
+                        counter--;
+                        if (counter > 0) {
+                            // returns promise which never resolves or rejects
+                            return new Promise((_1, _2) => {});
+                        }
+                        return counter;
+                    });
+                })();`);
+            }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 20, retryLimit: retryLimit})
+            ).then(
+                (result) => {
+                    expect(requestMessageBodies.length).toEqual(retryLimit);
+                    expect(result).toEqual(0);
+                    done();
+                });
+    });
+
+    it('accepts first response even if its the response to a previous request', function(done) {
+        const retryLimit = 1;
+        let gotTimeoutError = false;
+        ready.then(() => {
+            window.parentRPC.close();
+            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+                    'onRequestRetry': (reason, previousRejectReasons, requestMessageBody) => {
+                        expect(reason.name).toEqual('TimeoutError');
+                        gotTimeoutError = true;
+                    }}});
+            onScriptRun(`
+                (function() {
+                    const timeouts = [120, 80];
+                    let counter=0;
+                    childRPC.register("callme", () => new Promise((resolve, reject) => {
+                        const currentValue = counter;
+                        window.setTimeout(
+                            () => resolve(currentValue),
+                            timeouts[currentValue]);
+                        counter++;
+                        })
+                    );
+                })();`);
+            }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit})
+            ).then(
+                (result) => {
+                    expect(gotTimeoutError).toEqual(true);
+                    expect(result).toEqual(0);
+                    done();
+                });
+    });
+
 });

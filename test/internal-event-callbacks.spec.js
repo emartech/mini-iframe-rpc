@@ -142,7 +142,7 @@ describe('internal-event-callbacks', function() {
         });
     });
 
-     it('calls onClose event callback on close()', function(done) {
+    it('calls onClose event callback on close()', function(done) {
         ready.then(() => {
             window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
                 'onClose': () => {

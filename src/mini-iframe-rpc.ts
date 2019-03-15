@@ -32,7 +32,7 @@ export interface InvocationOptions {
     retryLimit: number;
 }
 
-type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose';
+type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry';
 
 // Optional callbacks for internal events useful for debugging and testing
 export type InternalEventCallbacks = {
@@ -144,6 +144,7 @@ export class MiniIframeRPC {
             if (!completed && failureCount === requestCount) {
 
                 if (isErrorRetriable(reason) && requestCount < (options.retryLimit + 1)) {
+                    this.internalEventCallback("onRequestRetry", reason, previousRejectReasons, requestMessageBody);
                     previousRejectReasons.push(reason);
                     makeAttempt();
                 // If error is non-retriable and there are no unanswered requests, give up.
