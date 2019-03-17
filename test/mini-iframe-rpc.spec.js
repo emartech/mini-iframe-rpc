@@ -19,7 +19,7 @@ describe('mini-iframe-rpc', function() {
     };
 
     beforeEach(() => {
-        window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
+        window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
         // inject the HTML fixture for the tests
         const iframe = document.createElement('iframe');
         iframe.srcdoc = `
@@ -28,7 +28,7 @@ describe('mini-iframe-rpc', function() {
                     <script src="${document.querySelectorAll('script[src*="mini-iframe-rpc.js"]')[0].src}"><\/script>
                     <script>
                         window.isChild = "child";
-                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
+                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
                         window.childRPC.register("appendScript", (script) => {
                             const element = document.createElement('script');
                             element.innerHTML = script;

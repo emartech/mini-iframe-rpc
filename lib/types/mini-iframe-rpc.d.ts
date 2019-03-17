@@ -3,6 +3,7 @@ export { ResultCache };
 export interface InvocationOptions {
     timeout: number;
     retryLimit: number;
+    retryAllFailures: boolean;
 }
 declare type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry' | 'onResultCacheEviction';
 export declare type InternalEventCallbacks = {

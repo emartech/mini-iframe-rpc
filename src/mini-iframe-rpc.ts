@@ -30,6 +30,7 @@ type MessageBody = RequestMessageBody | ResultMessageBody | ErrorMessageBody;
 export interface InvocationOptions {
     timeout: number;
     retryLimit: number;
+    retryAllFailures : boolean;
 }
 
 type InternalEventCallbackType = 'onUnexpectedResponse' | 'onReceive' | 'onSend' | 'onRegister' | 'onClose' | 'onRequestRetry' | 'onResultCacheEviction';
@@ -60,8 +61,9 @@ const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
 const CALLID_LENGTH = 8;
 const DEFAULT_INVOCATION_OPTIONS:InvocationOptions = {
-    timeout: 200,
-    retryLimit: 0
+    timeout: 100,
+    retryLimit: 2,
+    retryAllFailures: false
 }
 
 export class MiniIframeRPC {
@@ -127,18 +129,15 @@ export class MiniIframeRPC {
             if (options.timeout <= 0 || options.retryLimit < 1) {
                 return false;
             }
-            if (error instanceof ProcedureNotFoundError) {
-                return false;
-            }
 
-            return true;
+            return options.retryAllFailures || (error instanceof TimeoutError);            
         };
 
         const makeRequest = async () => {
             await this.sendMessage(targetWindow, targetOrigin, requestMessageBody);
 
             return new Promise((resolve, reject) => {
-                this.callbacks[requestMessageBody.callId] = { resolve, reject };
+                this.callbacks[requestMessageBody.callId] = {resolve, reject};
             });
         }
 
@@ -165,7 +164,6 @@ export class MiniIframeRPC {
                 }
             }
             // if there are still outstanding requests, wait for them to succeed or fail.
-            // TODO: call internal eventCallback
         };
 
         const makeAttempt = () => {
