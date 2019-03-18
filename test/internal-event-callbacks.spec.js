@@ -183,5 +183,65 @@ describe('internal-event-callbacks', function() {
         });
     });
 
+    it('retried request doesnt result in double execution of remote procedure', function(done) {
+        const retryLimit = 1;
+        let listen = false;
+        let sent = [], received = [];
+        let receivedResponses;
+
+        ready.then(() => {
+            window.parentRPC.close();
+            receivedResponses = new Promise((resolve, reject) => {
+                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({
+                    'eventCallbacks': {
+                        'onSend': (targetWindow, targetOrigin, fullMessage) => {
+                            if (listen) {
+                                sent.push(fullMessage.message);
+                            }
+                        },
+                        'onReceive': (postMessage) => {
+                            if (listen && sent.length > 0 && sent[0].callId === postMessage.data.message.callId) {
+                                received.push(postMessage.data.message);
+                                if (received.length === 2) {
+                                    listen = false;
+                                    resolve();
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            return onScriptRun(`
+                (function() {
+                    const timeouts = [120, 80];
+                    window.counter=0;
+                    childRPC.register("callme", () => new Promise((resolve, reject) => {
+                        const currentValue = counter;
+                        window.setTimeout(
+                            () => resolve(currentValue),
+                            timeouts[currentValue]);
+                        window.counter++;
+                        })
+                    );
+                })();`);
+            }).then(() => {
+                listen = true;
+                parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit});
+                return receivedResponses;
+            }).then(
+                (result) => {
+                    // two requests sent (original and retry)
+                    expect(sent.length).toEqual(2);
+                    // two responses received
+                    expect(received.length).toEqual(2);
+                    // all have the same callId
+                    expect([sent[0].callId, sent[1].callId, received[0].callId, received[1].callId]).toEqual([sent[0].callId, sent[0].callId, sent[0].callId, sent[0].callId]);
+                    // both responses have same result
+                    expect([received[0].result, received[1].result, 0]).toEqual([0,0,0]);
+                    // counter has only been incremented once
+                    expect(childWindow().counter).toEqual(1);
+                    done();
+                });
+    });
 
 });

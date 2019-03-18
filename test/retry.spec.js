@@ -36,19 +36,6 @@ describe('retries', function() {
                         window.isChild = "child";
                         window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({
                             'resultCacheCapacity': 0,
-                            //'defaultInvocationOptions': {
-                            //    retryAllFailures: true,
-                            //    timeout: 400,
-                            //    retryLimit: 2
-                            //},
-                            'eventCallbacks': {
-                                'onSend': (targetWindow, targetOrigin, fullMessage) => {
-                                    console.log('child send', fullMessage);
-                                },
-                                'onReceive': (postMessage) => {
-                                    console.log('child recv', postMessage.data);
-                                }
-                            }
                         });
                         window.childRPC.register("appendScript", (script) => {
                             const element = document.createElement('script');
