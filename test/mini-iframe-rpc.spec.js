@@ -1,63 +1,21 @@
+const MiniIframeRPC = require('mini-iframe-rpc').MiniIframeRPC;
+const TestBase = require('./test-base.js');
+
 describe('mini-iframe-rpc', function() {
-    let ready;
     window.isParent = "parent";
 
-    const childWindow = () => document.getElementById('childIframe').contentWindow;
-
-    const runChildScript = (source) => {
-        return window.parentRPC.invoke(childWindow(), null, 'appendScript', [source]);
-    };
-
-    const onScriptRun = (script) => {
-        return new Promise((resolve, _reject) => {
-            window.parentRPC.register('ready', (result) => resolve(result));
-            runChildScript(`
-                window.result = (function() {${script}})();
-                window.childRPC.invoke(window.parent, null, 'ready', [window.result]);
-                `);
-        });
-    };
-
     beforeEach(() => {
-        window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
-        // inject the HTML fixture for the tests
-        const iframe = document.createElement('iframe');
-        iframe.srcdoc = `
-            <html>
-                <body>
-                    <script src="${document.querySelectorAll('script[src*="mini-iframe-rpc.js"]')[0].src}"><\/script>
-                    <script>
-                        window.isChild = "child";
-                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
-                        window.childRPC.register("appendScript", (script) => {
-                            const element = document.createElement('script');
-                            element.innerHTML = script;
-                            document.body.appendChild(element);
-                            return true;
-                        });
-                        window.childRPC.register("close", () => window.childRPC.close());
-                        window.childRPC.invoke(window.parent, null, 'ready');
-                    <\/script>
-                </body>
-            </html>`;
-        iframe.sandbox = "allow-scripts";
-        iframe.id = "childIframe";
-        ready = new Promise((resolve, _reject) => {
-            document.body.appendChild(iframe);
-            window.parentRPC.register('ready', () => resolve(iframe.contentWindow));
-        });
+        window.parentRPC = new MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
+        TestBase.defaultBeforeEach({parentRPC: window.parentRPC});
     });
 
-    // remove the html fixture from the DOM
     afterEach(() => {
-        window.parentRPC.invoke(childWindow(), null, 'close');
-        window.parentRPC.close();
-        document.getElementById("childIframe").remove();
+        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
     });
 
     it('can invoke registered procedures (parent calling child)', function(done) {
-        ready.then((child) => {
-            onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => 
+        TestBase.ready.then((child) => {
+            TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => 
                 parentRPC.invoke(child, null, "callme").then((result) => {
                     expect(result).toBe("child");
                     done();
@@ -67,18 +25,18 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('can invoke registered procedures (child calling parent)', function(done) {
-        ready.then(() => {
+        TestBase.ready.then(() => {
             parentRPC.register('callme', (callerName) => {
                 expect(window.isParent).toBe("parent");
                 expect(callerName).toBe("child");
                 done();
             });
-            runChildScript(`childRPC.invoke(window.parent, null, "callme", [window.isChild])`);
+            TestBase.runChildScript(`childRPC.invoke(window.parent, null, "callme", [window.isChild])`);
         });
     });
 
     it('can properly pass complex arguments', function(done) {
-        ready.then((child) => onScriptRun(`
+        TestBase.ready.then((child) => TestBase.onScriptRun(`
             const recursiveReduce = (fn, args) => 
             args.map(arg => {
                 if (arg instanceof Array) {
@@ -88,7 +46,7 @@ describe('mini-iframe-rpc', function() {
             }).reduce(fn);
             window.childRPC.register("add", (...numbers) => recursiveReduce((a,b) => a+b, numbers)); 
             `)
-        ).then(() => parentRPC.invoke(childWindow(), null, "add", [1,2,[1,2,3],4,5])
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "add", [1,2,[1,2,3],4,5])
         ).then((result) => {
             expect(result).toBe(18);
             done();
@@ -97,8 +55,8 @@ describe('mini-iframe-rpc', function() {
 
     it('can return complex parameters', function(done) {
         const obj = {"a": 1, "b": [1,2,3], "c": false};
-        ready.then((child) => {
-            onScriptRun(`
+        TestBase.ready.then((child) => {
+            TestBase.onScriptRun(`
                 window.childRPC.register('callme', () => {
                     return ${JSON.stringify(obj)};
                 });
@@ -112,8 +70,8 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('can handle promise responses', function(done) {
-        ready.then((child) => {
-            onScriptRun(`window.childRPC.register('callme', () => Promise.resolve(true));`
+        TestBase.ready.then((child) => {
+            TestBase.onScriptRun(`window.childRPC.register('callme', () => Promise.resolve(true));`
             ).then(() => parentRPC.invoke(child, null, "callme")
             ).then((result) => {
                 expect(result).toBe(true);
@@ -123,7 +81,7 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('rejects response promise if called function doesnt exist', function(done) {
-        ready.then((child) => {
+        TestBase.ready.then((child) => {
             parentRPC.invoke(child, null, "unregistered_function").then(
                 (result) => done(new Error('Promise should not be resolved')),
                 (reject) => {
@@ -135,13 +93,13 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('unregisters a procedure when reregistered with null implementation ', function(done) {
-        ready.then(
-            (child) => onScriptRun('childRPC.register("callme", () => window.isChild);')
+        TestBase.ready.then(
+            (child) => TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);')
             // first call OK, because procedure is registered
-        ).then(() => parentRPC.invoke(childWindow(), null, "callme")
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme")
         ).then((result) => expect(result).toEqual('child')
-        ).then(() => onScriptRun('childRPC.register("callme", null);')
-        ).then(() => parentRPC.invoke(childWindow(), null, "callme")
+        ).then(() => TestBase.onScriptRun('childRPC.register("callme", null);')
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme")
         ).then(
             (result) => done(new Error('Promise should not be resolved (result: '+result+')')),
             (reject) => {
@@ -154,14 +112,14 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('does not receive messages after close() called', function(done) {
-        ready.then((child) => {
-            onScriptRun('childRPC.register("callme", () => window.isChild);');
+        TestBase.ready.then((child) => {
+            TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);');
             // first call OK, because procedure is registered
-        }).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {'timeout': 100})
+        }).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {'timeout': 100})
         ).then((result) => expect(result).toEqual('child')
-        ).then(() => window.parentRPC.invoke(childWindow(), null, 'close')
+        ).then(() => window.parentRPC.invoke(TestBase.childWindow(), null, 'close')
             // after child RPC closed, same call results in timeout
-        ).then(() => parentRPC.invoke(childWindow(), null, "callme", [], {'timeout': 100})
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {'timeout': 100})
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -175,11 +133,11 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles exceptions in remote procedure', function(done) {
-        ready.then(
-            () => onScriptRun(`childRPC.register("err", () => {
+        TestBase.ready.then(
+            () => TestBase.onScriptRun(`childRPC.register("err", () => {
                 throw new Error("err");
             });`)
-        ).then(() => parentRPC.invoke(childWindow(), null, "err")
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "err")
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -192,9 +150,9 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles rejected promise in remote procedure', function(done) {
-        ready.then(
-            () => onScriptRun(`childRPC.register("err", () => Promise.reject("rejectionReason"));`)
-        ).then(() => parentRPC.invoke(childWindow(), null, "err")
+        TestBase.ready.then(
+            () => TestBase.onScriptRun(`childRPC.register("err", () => Promise.reject("rejectionReason"));`)
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "err")
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -205,9 +163,9 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles unserializable response objects', function(done) {
-        ready.then(
-            () => onScriptRun(`childRPC.register("err", () => window);`)
-        ).then(() => parentRPC.invoke(childWindow(), null, "err")
+        TestBase.ready.then(
+            () => TestBase.onScriptRun(`childRPC.register("err", () => window);`)
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "err")
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -217,9 +175,9 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles unserializable request objects', function(done) {
-        ready.then(
-            () => onScriptRun(`childRPC.register("callme", () => true);`)
-        ).then(() => parentRPC.invoke(childWindow(), null, "callme", [window])
+        TestBase.ready.then(
+            () => TestBase.onScriptRun(`childRPC.register("callme", () => true);`)
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [window])
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -229,15 +187,15 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles timeouts in remote procedure', function(done) {
-        ready.then(
+        TestBase.ready.then(
             () => {
-                onScriptRun(`
+                TestBase.onScriptRun(`
                     childRPC.register("err", () => {
                         return new Promise(() => true);
                     });`
                 );
             }
-        ).then(() => parentRPC.invoke(childWindow(), null, "err", [], {'timeout': 100})
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "err", [], {'timeout': 100})
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
@@ -250,16 +208,15 @@ describe('mini-iframe-rpc', function() {
 
     it('can invoke function registered in the same RPC instance', function(done) {
         const ARGS = [1,2,3];
-        ready.then(() => {
-            window.parentRPC.register('callme', (...args) =>  {
-                return args.map((x) => x + 1);
-            });
-            window.parentRPC.invoke(window, window.location.origin, 'callme', ARGS).then(
+        window.parentRPC.register('callmeSameIframe', (...args) =>  {
+            return args.map((x) => x + 1);
+        });
+        window.parentRPC.invoke(
+            window, window.location.origin, 'callmeSameIframe', ARGS, {'timeout': 100, 'retryLimit': 5}).then(
                 (result) =>{
                     expect(result).toEqual([2,3,4]);
                     done();
                 }
             );
-        });
     });
 });

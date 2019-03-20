@@ -4,8 +4,9 @@
   "version": "1.1.0",
   "main": "lib/mini_iframe_rpc.js",
   "scripts": {
-    "build": "webpack --env dev && webpack --env build && npm run test",
-    "test": "karma start test/karma.conf.js",
+    "build": "webpack --env production",
+    "build_dev": "webpack --env production",
+    "test": "karma start karma.conf.js",
     "lint": "tslint -p ."
   },
   "repository": {
@@ -37,6 +38,7 @@
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^2.0.1",
     "karma-mocha-reporter": "^2.2.5",
+    "karma-webpack": "^3.0.5",
     "ts-loader": "^5.3.3",
     "tslint": "^5.12.1",
     "tslint-config-prettier": "^1.18.0",

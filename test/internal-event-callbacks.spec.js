@@ -1,61 +1,18 @@
+const MiniIframeRPC = require('mini-iframe-rpc').MiniIframeRPC;
+const TestBase = require('./test-base.js');
+
+
 describe('internal-event-callbacks', function() {
-    let ready;
+
     window.isParent = "parent";
 
-    const childWindow = () => document.getElementById('unboxedChildIframe').contentWindow;
-
-    const runChildScript = (source) => {
-        return window.parentRPC.invoke(childWindow(), null, 'appendScript', [source]);
-    };
-
-    const onScriptRun = (script) => {
-        return new Promise((resolve, _reject) => {
-            window.parentRPC.register('ready', (result) => resolve(result));
-            runChildScript(`
-                window.result = (function() {${script}})();
-                window.childRPC.invoke(window.parent, null, 'ready', [window.result]);
-                `);
-        });
-    };
-
     beforeEach(() => {
-        window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
-        // inject the HTML fixture for the tests
-        const iframe = document.createElement('iframe');
-        iframe.srcdoc = `
-            <html>
-                <body>
-                    <script src="${document.querySelectorAll('script[src*="mini-iframe-rpc.js"]')[0].src}"><\/script>
-                    <script>
-                        window.isChild = "child";
-                        window.childRPC = new window["mini-iframe-rpc"].MiniIframeRPC();
-                        window.childRPC.register("appendScript", (script) => {
-                            const element = document.createElement('script');
-                            element.innerHTML = script;
-                            document.body.appendChild(element);
-                            return true;
-                        });
-                        window.childRPC.register("close", () => window.childRPC.close());
-                        window.childRPC.invoke(window.parent, null, 'ready');
-                    <\/script>
-                </body>
-            </html>`;
-        iframe.sandbox = "allow-scripts allow-same-origin";
-        iframe.id = "unboxedChildIframe";
-        ready = new Promise((resolve, _reject) => {
-            document.body.appendChild(iframe);
-            window.parentRPC.register('ready', () => {
-                window.parentRPC.close();
-                resolve(iframe.contentWindow);
-            });
-        });
+        window.parentRPC = new MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
+        TestBase.defaultBeforeEach({parentRPC: window.parentRPC, sandbox: 'allow-scripts allow-same-origin'});
     });
 
-    // remove the html fixture from the DOM
     afterEach(() => {
-        window.parentRPC.invoke(childWindow(), null, 'close');
-        window.parentRPC.close();
-        document.getElementById("unboxedChildIframe").remove();
+        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
     });
 
     const cleanCallId = (fullMessage) => {
@@ -66,10 +23,10 @@ describe('internal-event-callbacks', function() {
 
 
     it('calls onRegister handler on procedure registration', function(done) {
-        ready.then(() => {
+        TestBase.ready.then(() => {
             const name = "afunction";
             const impl = (x) => x;
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+            window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onRegister': (_name, _impl) => {
                     expect(_name).toEqual(name);
                     expect(_impl).toEqual(impl);
@@ -81,9 +38,9 @@ describe('internal-event-callbacks', function() {
     });
 
     it('calls onReceive handler on postMessage reception', function(done) {
-        ready.then(() => {
+        TestBase.ready.then(() => {
             let listenToOnReceive = false;
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+            window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onReceive': (postMessage) => {
                     if (!listenToOnReceive) {
                         return;
@@ -100,7 +57,7 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
+            TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
                 listenToOnReceive = true;
                 parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
@@ -110,9 +67,9 @@ describe('internal-event-callbacks', function() {
     });
 
     it('calls onSend handler on postMessage send', function(done) {
-        ready.then((child) => {
+        TestBase.ready.then((child) => {
             let listenToOnSend = false;
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+            window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onSend': (targetWindow, targetOrigin, fullMessage) => {
                     if (!listenToOnSend) {
                         return;
@@ -133,7 +90,7 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            onScriptRun('childRPC.register("callme", () => window.isChild);').then(() =>  {
+            TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() =>  {
                 listenToOnSend = true;
                 parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
                     done(new Error('onSend should be called before RPC call completes'));
@@ -143,8 +100,8 @@ describe('internal-event-callbacks', function() {
     });
 
     it('calls onClose event callback on close()', function(done) {
-        ready.then(() => {
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+        TestBase.ready.then(() => {
+            window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onClose': () => {
                     done();
                 }
@@ -154,9 +111,9 @@ describe('internal-event-callbacks', function() {
     });
 
     it('calls onUnexpectedResponse handler on reception of responses without registered callbacks', function(done) {
-        ready.then(() => {
+        TestBase.ready.then(() => {
             let listenToOnReceive = false;
-            window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({'eventCallbacks': {
+            window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onReceive': (postMessage) => {
                     // change callId so response cannot be matched with outgoing call.
                     if (!listenToOnReceive) {
@@ -174,7 +131,7 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
+            TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
                 listenToOnReceive = true;
                 parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
@@ -189,10 +146,10 @@ describe('internal-event-callbacks', function() {
         let sent = [], received = [];
         let receivedResponses;
 
-        ready.then(() => {
+        TestBase.ready.then(() => {
             window.parentRPC.close();
             receivedResponses = new Promise((resolve, reject) => {
-                window.parentRPC = new window["mini-iframe-rpc"].MiniIframeRPC({
+                window.parentRPC = new MiniIframeRPC({
                     'eventCallbacks': {
                         'onSend': (targetWindow, targetOrigin, fullMessage) => {
                             if (listen) {
@@ -211,7 +168,7 @@ describe('internal-event-callbacks', function() {
                     }
                 });
             });
-            return onScriptRun(`
+            return TestBase.onScriptRun(`
                 (function() {
                     const timeouts = [120, 80];
                     window.counter=0;
@@ -226,7 +183,7 @@ describe('internal-event-callbacks', function() {
                 })();`);
             }).then(() => {
                 listen = true;
-                parentRPC.invoke(childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit});
+                parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit});
                 return receivedResponses;
             }).then(
                 (result) => {
@@ -239,7 +196,7 @@ describe('internal-event-callbacks', function() {
                     // both responses have same result
                     expect([received[0].result, received[1].result, 0]).toEqual([0,0,0]);
                     // counter has only been incremented once
-                    expect(childWindow().counter).toEqual(1);
+                    expect(TestBase.childWindow().counter).toEqual(1);
                     done();
                 });
     });

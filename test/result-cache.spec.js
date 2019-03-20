@@ -1,6 +1,8 @@
+const ResultCache = require('mini-iframe-rpc').ResultCache;
+
 describe('result-cache', function() {
     it('eviction test', function(done) {
-        const resultCache = new window["mini-iframe-rpc"].ResultCache({capacity: 2});
+        const resultCache = new ResultCache({capacity: 2});
         resultCache.setCachedResult('a', 1);
         resultCache.setCachedResult('b', 2);
         resultCache.setCachedResult('c', 3);
@@ -13,7 +15,7 @@ describe('result-cache', function() {
 
 
     it('rewriting a callIds result works as expected', function(done) {
-        const resultCache = new window["mini-iframe-rpc"].ResultCache({capacity: 2});
+        const resultCache = new ResultCache({capacity: 2});
         resultCache.setCachedResult('a', 1);
         resultCache.setCachedResult('b', 2);
         resultCache.setCachedResult('a', 3);

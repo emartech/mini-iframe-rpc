@@ -1,5 +1,4 @@
 /* global __dirname, require, module*/
-
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const webpack = require('webpack');
 const path = require('path');
@@ -10,12 +9,12 @@ let libraryName = pkg.name;
 
 let outputFile, mode, devtool;
 
-if (env === 'build') {
+if (env === 'production') {
   mode = 'production';
   outputFile = libraryName + '.min.js';
 } else {
   mode = 'development';
-  outputFile = libraryName + '.js';
+  outputFile = libraryName + '-[name].js';
   devtool = 'inline-source-map';
 }
 
@@ -29,7 +28,8 @@ const config = {
     library: libraryName,
     libraryTarget: 'umd',
     umdNamedDefine: true,
-    globalObject: "typeof self !== 'undefined' ? self : this"
+    globalObject: "typeof self !== 'undefined' ? self : this",
+    chunkFilename: '[id].[chunkhash].js'
   },
   module: {
     rules: [
@@ -69,5 +69,4 @@ const config = {
       })]
   }
 };
-
 module.exports = config;
