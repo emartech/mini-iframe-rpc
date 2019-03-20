@@ -1,3 +1,5 @@
+import {assign} from '../assign';
+
 export class MiniIframeError extends Error {
 
     timestamp:number;
@@ -7,7 +9,7 @@ export class MiniIframeError extends Error {
         super(message);
         this.timestamp =  +(new Date());
         if (state) {
-            Object.assign(this, state);
+            assign(this, state);
         }
         // see: typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain

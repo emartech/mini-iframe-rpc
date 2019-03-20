@@ -3,9 +3,15 @@
         <title>Mini Iframe RPC unit tests</title>
     </head>
     <body>
+        <script src="/base/polyfill.min.js"></script>
         <script>
             window.isChild = "child";
-            window.miniIframeConfig = {'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}}; 
+            window.miniIframeConfig = {
+                'defaultInvocationOptions': {
+                    'timeout': 0,
+                    'retryLimit': 0
+                }
+            }; 
         </script>
         <script src="/base/mini-iframe-rpc-iframe.js"></script>
     </body>

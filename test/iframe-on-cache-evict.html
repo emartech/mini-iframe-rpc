@@ -3,6 +3,8 @@
         <title>Mini Iframe RPC unit tests</title>
     </head>
     <body>
+
+        <script src="/base/polyfill.min.js"></script>
         <script>
             window.isChild = "child";
             window.miniIframeConfig = {
@@ -11,15 +13,19 @@
                     timeout: 0,
                 },
                 'eventCallbacks': {
+                    /*
                     'onSend': (targetWindow, targetOrigin, fullMessage) => {
                         // console.log('child send', fullMessage);
                     },
                     'onReceive': (postMessage) => {
                         // console.log('child recv', postMessage.data);
                     },
-                    'onResultCacheEviction': (callId, evictedResult) => {
+                    */
+                    'onResultCacheEviction': function (callId, evictedResult) {
                         // console.log('cache evict', callId);
-                        Promise.resolve(evictedResult).then((er) => window.childRPC.invoke(window.parent, null, 'onEvict', [callId, er]));
+                        Promise.resolve(evictedResult).then(function(er) {
+                            window.childRPC.invoke(window.parent, null, 'onEvict', [callId, er]);
+                        });
                     }
                 }
             };

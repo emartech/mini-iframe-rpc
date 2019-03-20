@@ -10,6 +10,7 @@ module.exports = function(config) {
     singleRun: true,
     reporters: ['mocha'],
     files: [
+      {pattern: 'polyfill.min.js', included: true, watched: false},
       '*.spec.js',
       '*.spec.ts',
       {pattern: 'iframe.js', included: false, watched: true},
