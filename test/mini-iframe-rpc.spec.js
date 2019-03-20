@@ -207,16 +207,14 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('can invoke function registered in the same RPC instance', function(done) {
-        const ARGS = [1,2,3];
-        window.parentRPC.register('callmeSameIframe', (...args) =>  {
-            return args.map((x) => x + 1);
+        TestBase.ready.then(() => {
+            window.parentRPC.register('finishTest', () =>  {
+                done();
+            });
+            return TestBase.onScriptRun(`
+                    childRPC.register("callme", () => window.childRPC.invoke(window.parent, null, 'finishTest'));
+                    childRPC.invoke(window, null, "callme");
+                `);
         });
-        window.parentRPC.invoke(
-            window, window.location.origin, 'callmeSameIframe', ARGS, {'timeout': 100, 'retryLimit': 5}).then(
-                (result) =>{
-                    expect(result).toEqual([2,3,4]);
-                    done();
-                }
-            );
     });
 });
