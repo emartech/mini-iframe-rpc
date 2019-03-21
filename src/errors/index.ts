@@ -23,7 +23,7 @@ const remoteErrorClasses = ([
         obj[constr.name] = constr;
 
         return obj;
-    }, {} as ERROR_MAP) as ERROR_MAP;    
+    }, {} as ERROR_MAP);    
 
 export const serializeRemoteError = (cause: RemoteErrorCause, remoteExceptionName?: string):RemoteError => {    
     

@@ -10,6 +10,7 @@ export class MiniIframeError extends Error {
             Object.assign(this, state);
         }
         // see: typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html
+        // tslint:disable-next-line:no-unsafe-any
         Object.setPrototypeOf(this, new.target.prototype); // restore prototype chain
         this.name = MiniIframeError.name; // stack traces display correctly now 
         

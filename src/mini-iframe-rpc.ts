@@ -71,7 +71,7 @@ export class MiniIframeRPC {
     private registeredProcedures:{[key:string]: ProcedureImplementation} = {};
     private resultCache:ResultCache;
 
-    constructor(initParameters?: InitParameters) {
+    constructor(initParameters?: Partial<InitParameters>) {
         this.config = {
             windowRef: initParameters && initParameters.windowRef || window,
             originWhitelist: initParameters && initParameters.originWhitelist || [],
@@ -171,8 +171,7 @@ export class MiniIframeRPC {
             if (options.timeout > 0) {
                 responsePromise = this.timeboxPromise(responsePromise, options.timeout);
             }
-
-            return responsePromise.then(handleResolve, handleReject);
+            responsePromise.then(handleResolve, handleReject);
         };
 
         const returnValue = new Promise((resolve, reject) => {
@@ -235,7 +234,8 @@ export class MiniIframeRPC {
         const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
             const isError = rejectOrError instanceof Error;
-            this.sendMessage(
+            
+            return this.sendMessage(
                 context.messageSource,
                 responseOrigin,
                 {

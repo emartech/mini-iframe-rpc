@@ -1,14 +1,13 @@
 import {MiniIframeError} from './mini-iframe-error';
-import {errorToJSON} from './remote-error';
 
 // tslint:disable-next-line:no-any
 const makeMessage = (procedureName: string, cause?: any, previousRejectReasons?: any[]):string => {
     let message = `Error invoking remote procedure '${procedureName}'.`;
-    if (cause instanceof Error) {
-        const err = cause as Error;
-        message += ` ${err.name}: ${err.message}.`;
+    if (cause instanceof Error) {        
+        message += ` ${cause.name}: ${cause.message}.`;
     } else if (cause) {
-        message += ` Reason: ${cause.toString()}.`;
+        // tslint:disable-next-line:no-unsafe-any
+        message += ` Reason: ${cause.toString()}`;
     }
     if (previousRejectReasons && previousRejectReasons.length > 0) {
         const plural = previousRejectReasons.length > 1 ? 's' : '';
