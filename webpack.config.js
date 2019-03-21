@@ -14,7 +14,7 @@ if (env === 'production') {
   outputFile = libraryName + '.min.js';
 } else {
   mode = 'development';
-  outputFile = libraryName + '-[name].js';
+  outputFile = libraryName + (env === 'development' ? '.js' : '-[name].js');
   devtool = 'inline-source-map';
 }
 

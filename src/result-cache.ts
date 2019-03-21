@@ -1,5 +1,3 @@
-import {assign} from './assign';
-
 export interface ResultCacheParameters {
     capacity: number;
     // tslint:disable-next-line:no-any
@@ -22,7 +20,7 @@ export class ResultCache {
     private config: ResultCacheParameters;
 
     constructor(config?: Partial<ResultCacheParameters>) {
-        this.config = assign({}, DEFAULT_PARAMETERS, config || {});
+        this.config = Object.assign({}, DEFAULT_PARAMETERS, config || {});
     }
 
     hasCachedResult(callId:string) {

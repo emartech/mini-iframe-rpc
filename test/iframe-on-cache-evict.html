@@ -24,7 +24,9 @@
                     'onResultCacheEviction': function (callId, evictedResult) {
                         // console.log('cache evict', callId);
                         Promise.resolve(evictedResult).then(function(er) {
-                            window.childRPC.invoke(window.parent, null, 'onEvict', [callId, er]);
+                            window.childRPC.invoke(window.parent, null, 'onEvict', [callId, er])
+                                // Ignore InvocationErrors
+                                .catch(() => 0)
                         });
                     }
                 }

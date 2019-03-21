@@ -27,7 +27,7 @@ describe('on-cache-evict', function() {
                         resolve(evictedResult);
                     }
                     evictionCount++;
-                });
+                })
             });
             return TestBase.onScriptRun(`
                 (function() {

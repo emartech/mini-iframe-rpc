@@ -1,6 +1,5 @@
 /* tslint:disable no-any no-unsafe-any */
 
-import {assign} from './assign';
 import {deserializeRemoteError, EvaluationError, InvocationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 import {DEFAULT_RESULT_CACHE_CAPACITY, ResultCache} from "./result-cache";
 export {ResultCache}; // so unit tests can access ResponseCache
@@ -76,7 +75,7 @@ export class MiniIframeRPC {
         this.config = {
             windowRef: initParameters && initParameters.windowRef || window,
             originWhitelist: initParameters && initParameters.originWhitelist || [],
-            defaultInvocationOptions: assign({}, DEFAULT_INVOCATION_OPTIONS, initParameters && initParameters.defaultInvocationOptions || {}),            
+            defaultInvocationOptions: Object.assign({}, DEFAULT_INVOCATION_OPTIONS, initParameters && initParameters.defaultInvocationOptions || {}),            
             eventCallbacks: initParameters && initParameters.eventCallbacks || {},
             resultCacheCapacity: initParameters && typeof initParameters.resultCacheCapacity === 'number' ? initParameters.resultCacheCapacity : DEFAULT_RESULT_CACHE_CAPACITY
         };
@@ -100,7 +99,7 @@ export class MiniIframeRPC {
     }
 
     invoke (targetWindow: Window, targetOrigin: string | null, procedureName: string, argumentList?: any[], invocationOptions?: InvocationOptions): Promise<any> {
-        const options = assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
+        const options = Object.assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
         const callId = this.getNextCallId();
         const requestMessageBody: RequestMessageBody = {
             contents: "request",

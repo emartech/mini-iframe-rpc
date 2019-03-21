@@ -40,6 +40,7 @@ describe('internal-event-callbacks', function() {
     it('calls onReceive handler on postMessage reception', function(done) {
         TestBase.ready.then(() => {
             let listenToOnReceive = false;
+            window.parentRPC.close();
             window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
                 'onReceive': (postMessage) => {
                     if (!listenToOnReceive) {
@@ -59,7 +60,7 @@ describe('internal-event-callbacks', function() {
             }});
             TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
                 listenToOnReceive = true;
-                parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
+                parentRPC.invoke(TestBase.childWindow(), window.location.origin, "callme").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
                 })
             });
@@ -133,7 +134,7 @@ describe('internal-event-callbacks', function() {
             }});
             TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);').then(() => {
                 listenToOnReceive = true;
-                parentRPC.invoke(child, window.location.origin, "callme").then((result) => {
+                parentRPC.invoke(TestBase.childWindow(), window.location.origin, "callme").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
                 })
             });

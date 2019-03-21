@@ -25,9 +25,13 @@ const testBase = {
         });
     },
     defaultAfterEach: ({parentRPC}) => {
-        parentRPC.invoke(testBase.childWindow(), null, 'close');
-        parentRPC.close();
-        document.getElementById(testBase.childWindowId).remove();
+        parentRPC.invoke(testBase.childWindow(), null, 'close', [], {timeout: 10, retryLimit: 0}).then(
+            () => parentRPC.close(),
+            // ignore close errors
+            () => {}
+        ).finally(
+            () => document.getElementById(testBase.childWindowId).remove()
+        );
     }
 };
 
