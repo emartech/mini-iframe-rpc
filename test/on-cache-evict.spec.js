@@ -6,13 +6,13 @@ describe('on-cache-evict', function() {
     //
     window.isParent = "parent";
 
-    beforeEach(() => {
+    beforeEach((done) => {
         window.parentRPC = new MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
-        TestBase.defaultBeforeEach({parentRPC: window.parentRPC, sandbox: 'allow-scripts allow-same-origin', src: 'base/iframe-on-cache-evict.html'});
+        TestBase.defaultBeforeEach({done, parentRPC: window.parentRPC, sandbox: 'allow-scripts allow-same-origin', src: 'base/iframe-on-cache-evict.html'});
     });
 
-    afterEach(() => {
-        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
+    afterEach((done) => {
+        TestBase.defaultAfterEach({done, parentRPC: window.parentRPC});
     });
 
     it('cache eviction internal event callback called on eviction', function(done) {

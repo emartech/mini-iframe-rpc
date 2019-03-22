@@ -4,13 +4,13 @@ const TestBase = require('./test-base.js');
 describe('mini-iframe-rpc', function() {
     window.isParent = "parent";
 
-    beforeEach(() => {
+    beforeEach((done) => {
         window.parentRPC = new MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
-        TestBase.defaultBeforeEach({parentRPC: window.parentRPC});
+        TestBase.defaultBeforeEach({done, parentRPC: window.parentRPC});
     });
 
-    afterEach(() => {
-        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
+    afterEach((done) => {
+        TestBase.defaultAfterEach({done, parentRPC: window.parentRPC});
     });
 
     it('can invoke registered procedures (parent calling child)', function(done) {
@@ -94,19 +94,19 @@ describe('mini-iframe-rpc', function() {
 
     it('unregisters a procedure when reregistered with null implementation ', function(done) {
         TestBase.ready.then(
-            (child) => TestBase.onScriptRun('childRPC.register("callme", () => window.isChild);')
+            (child) => TestBase.onScriptRun('childRPC.register("callmeX", () => window.isChild);')
             // first call OK, because procedure is registered
-        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme")
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callmeX")
         ).then((result) => expect(result).toEqual('child')
-        ).then(() => TestBase.onScriptRun('childRPC.register("callme", null);')
-        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme")
+        ).then(() => TestBase.onScriptRun('childRPC.register("callmeX", null);')
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callmeX")
         ).then(
             (result) => done(new Error('Promise should not be resolved (result: '+result+')')),
             (reject) => {
                 expect(reject.name).toEqual('InvocationError');
-                expect(reject.procedureName).toEqual('callme');
+                expect(reject.procedureName).toEqual('callmeX');
                 expect(reject.cause.name).toEqual("ProcedureNotFoundError");
-                expect(reject.cause.message).toEqual("Remote procedure 'callme' not registered in remote RPC instance.");
+                expect(reject.cause.message).toEqual("Remote procedure 'callmeX' not registered in remote RPC instance.");
                 done();
             });
     });
@@ -212,7 +212,10 @@ describe('mini-iframe-rpc', function() {
                 done();
             });
             return TestBase.onScriptRun(`
-                    childRPC.register("callme", () => window.childRPC.invoke(window.parent, null, 'finishTest'));
+                    childRPC.register("callme", () => {
+                        // ignore errors on invoke
+                        return window.childRPC.invoke(window.parent, null, 'finishTest').catch(() => 0);
+                    });
                     childRPC.invoke(window, null, "callme");
                 `);
         });

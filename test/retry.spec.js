@@ -4,18 +4,18 @@ const TestBase = require('./test-base.js');
 
 describe('retries', function() {
 
-    beforeEach(() => {
+    beforeEach((done) => {
         window.parentRPC = new MiniIframeRPC({
             'defaultInvocationOptions': {
                 retryAllFailures: true,
                 timeout: 400,
                 retryLimit: 2}
         });
-        TestBase.defaultBeforeEach({parentRPC: window.parentRPC, src: "base/iframe-nocache.html"});
+        TestBase.defaultBeforeEach({done, parentRPC: window.parentRPC, src: "base/iframe-nocache.html"});
     });
 
-    afterEach(() => {
-        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
+    afterEach((done) => {
+        TestBase.defaultAfterEach({done, parentRPC: window.parentRPC});
     });
 
     it('Retries until exhausted', function(done) {

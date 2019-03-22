@@ -5,13 +5,13 @@ describe('mini-iframe-rpc (same-origin iframe)', function() {
 
     window.isParent = "parent";
 
-    beforeEach(() => {
+    beforeEach((done) => {
         window.parentRPC = new MiniIframeRPC({'defaultInvocationOptions': {'timeout': 0, 'retryLimit': 0}});
-        TestBase.defaultBeforeEach({parentRPC: window.parentRPC, sandbox: 'allow-scripts allow-same-origin'});
+        TestBase.defaultBeforeEach({done, parentRPC: window.parentRPC, sandbox: 'allow-scripts allow-same-origin'});
     });
 
-    afterEach(() => {
-        TestBase.defaultAfterEach({parentRPC: window.parentRPC});
+    afterEach((done) => {
+        TestBase.defaultAfterEach({done, parentRPC: window.parentRPC});
     });
 
 

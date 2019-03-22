@@ -234,7 +234,7 @@ export class MiniIframeRPC {
         const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
             const isError = rejectOrError instanceof Error;
-            
+
             return this.sendMessage(
                 context.messageSource,
                 responseOrigin,
@@ -259,19 +259,24 @@ export class MiniIframeRPC {
             return resultPromise;
         };
         if (this.registeredProcedures[procedureName]) {            
-            return getResult()
-                        .then(
-                            (result?:any) => this.sendMessage(
-                                context.messageSource,
-                                responseOrigin,
-                                {
-                                    contents: "result",
-                                    callId,
-                                    result
-                                }).catch(error => sendError(error, SendMessageError.name)),
-                            (error?:any) => sendError(error, EvaluationError.name));            
+            getResult()
+                .then(
+                    (result?:any) => {
+                        this.sendMessage(
+                            context.messageSource,
+                            responseOrigin,
+                            {
+                                contents: "result",
+                                callId,
+                                result
+                            }).then(
+                                () => 0,
+                                error => sendError(error, SendMessageError.name));
+                    },
+                    (error?:any) => sendError(error, EvaluationError.name)
+                );            
         } else {
-            return sendError(new ProcedureNotFoundError({procedureName}));
+            sendError(new ProcedureNotFoundError({procedureName}));
         }
     }
 
@@ -296,10 +301,10 @@ export class MiniIframeRPC {
             this.internalEventCallback("onReceive", messageEvent);    
             const requestMessageBody : MessageBody = messageEvent.data.message as MessageBody;
             if (requestMessageBody.contents === "request") {
-                return this.handleRequest({requestMessageBody, messageSource: messageEvent.source as Window, messageOrigin: messageEvent.origin});
-            }
-
-            return this.handleResponse(requestMessageBody);                        
+                this.handleRequest({requestMessageBody, messageSource: messageEvent.source as Window, messageOrigin: messageEvent.origin});
+            } else {
+                this.handleResponse(requestMessageBody);
+            }            
         }
     }
 
