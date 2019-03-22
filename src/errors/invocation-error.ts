@@ -1,9 +1,10 @@
+import {isError} from './is-error';
 import {MiniIframeError} from './mini-iframe-error';
 
 // tslint:disable-next-line:no-any
 const makeMessage = (procedureName: string, cause?: any, previousRejectReasons?: any[]):string => {
     let message = `Error invoking remote procedure '${procedureName}'.`;
-    if (cause instanceof Error) {        
+    if (isError(cause)) {        
         message += ` ${cause.name}: ${cause.message}.`;
     } else if (cause) {
         // tslint:disable-next-line:no-unsafe-any

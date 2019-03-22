@@ -1,6 +1,6 @@
 /* tslint:disable no-any no-unsafe-any */
 
-import {deserializeRemoteError, EvaluationError, InvocationError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
+import {deserializeRemoteError, EvaluationError, InvocationError, isError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 import {DEFAULT_RESULT_CACHE_CAPACITY, ResultCache} from "./result-cache";
 export {ResultCache}; // so unit tests can access ResponseCache
 
@@ -229,10 +229,7 @@ export class MiniIframeRPC {
         const argumentList = context.requestMessageBody.argumentList;
         const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
-            // the wonders of Javascript: Error detection https://stackoverflow.com/a/45496068
-            const isError = !!rejectOrError && (
-                (rejectOrError instanceof Error) || 
-                (rejectOrError.stack && rejectOrError.message && typeof rejectOrError.stack === 'string' && typeof rejectOrError.message === 'string'));
+            const sendingError = isError(rejectOrError);
 
             return this.sendMessage(
                 context.messageSource,
@@ -240,8 +237,8 @@ export class MiniIframeRPC {
                 {
                     contents: "error",
                     callId,
-                    isErrorInstance: isError,                    
-                    errorValue: isError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
+                    isErrorInstance: sendingError,                    
+                    errorValue: sendingError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
                 });
         };
         const getResult = () => {
