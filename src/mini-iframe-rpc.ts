@@ -213,17 +213,13 @@ export class MiniIframeRPC {
 
     private sendMessage (targetWindow: Window, targetOrigin: string | null, messageBody: MessageBody) : Promise<void> {
         return new Promise((resolve, reject) => {
-            try {
-                const fullMessage = {
-                    "type": RPC_MESSAGE_TYPE,
-                    "message": messageBody
-                };
-                this.internalEventCallback("onSend", targetWindow, targetOrigin, fullMessage);
-                targetWindow.postMessage(fullMessage, targetOrigin || "*");
-                resolve();
-            } catch (e) {
-                reject(e);
-            }
+            const fullMessage = {
+                "type": RPC_MESSAGE_TYPE,
+                "message": messageBody
+            };
+            this.internalEventCallback("onSend", targetWindow, targetOrigin, fullMessage);
+            targetWindow.postMessage(fullMessage, targetOrigin || "*");
+            resolve();
         });
     }        
 
@@ -233,7 +229,10 @@ export class MiniIframeRPC {
         const argumentList = context.requestMessageBody.argumentList;
         const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
-            const isError = rejectOrError instanceof Error;
+            // the wonders of Javascript: Error detection https://stackoverflow.com/a/45496068
+            const isError = !!rejectOrError && (
+                (rejectOrError instanceof Error) || 
+                (rejectOrError.stack && rejectOrError.message && typeof rejectOrError.stack === 'string' && typeof rejectOrError.message === 'string'));
 
             return this.sendMessage(
                 context.messageSource,
@@ -261,18 +260,15 @@ export class MiniIframeRPC {
         if (this.registeredProcedures[procedureName]) {            
             getResult()
                 .then(
-                    (result?:any) => {
-                        this.sendMessage(
-                            context.messageSource,
-                            responseOrigin,
-                            {
-                                contents: "result",
-                                callId,
-                                result
-                            }).then(
-                                () => 0,
-                                error => sendError(error, SendMessageError.name));
-                    },
+                    (result?:any) => this.sendMessage(
+                        context.messageSource,
+                        responseOrigin,
+                        {
+                            contents: "result",
+                            callId,
+                            result
+                        }).catch(error => sendError(error, SendMessageError.name))
+                    ,
                     (error?:any) => sendError(error, EvaluationError.name)
                 );            
         } else {

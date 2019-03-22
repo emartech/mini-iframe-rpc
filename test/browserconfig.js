@@ -1,18 +1,19 @@
 /*eslint camelcase: 0*/
 
-/*
+/* Browserstack valid configurations: https://www.browserstack.com/automate/capabilities
  * Browser version histories: 
  * Chrome: https://en.wikipedia.org/wiki/Google_Chrome_version_history
  * Safari: https://en.wikipedia.org/wiki/Safari_version_history
  */
 
 const ALL = {
-      firefox_52_osx: {
+      firefox_65_windows: {
         base: 'BrowserStack',
         browser: 'Firefox',
-        browser_version: '52.0',
-        os: 'OS X',
-        os_version: 'Sierra',
+        browser_version: '65.0',
+        os: 'Windows',
+        os_version: '10',
+        supported: true
       },
       chrome__56_osx: {
         base: 'BrowserStack',

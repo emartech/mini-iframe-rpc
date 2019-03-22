@@ -163,8 +163,8 @@ describe('mini-iframe-rpc', function() {
     });
 
     it('gracefully handles unserializable response objects', function(done) {
-        TestBase.ready.then(
-            () => TestBase.onScriptRun(`childRPC.register("err", () => window);`)
+        TestBase.ready.then(() =>
+            TestBase.onScriptRun(`childRPC.register("err", () => window);`)
         ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "err")
         ).then(
             (result) => done(new Error('Promise should not be resolved')),

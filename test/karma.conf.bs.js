@@ -18,9 +18,9 @@ var karmaConfig = function(config) {
     browserStack: {
       username: browserConfig.browserstack.user,
       accessKey: browserConfig.browserstack.key,
-      build: 'InstantSearch Unit tests build',
-      name: 'InstantSearch Unit tests',
-      project: 'InstantSearch',
+      build: 'MiniIframeRPC build',
+      name: 'MiniIframeRPC',
+      project: 'MiniIframeRPC',
     },
     customLaunchers: browserConfig.browserstack.envs,
   }));
