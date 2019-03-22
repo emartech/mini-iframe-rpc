@@ -36,6 +36,7 @@ const ALL = {
         browser_version: '12.0',
         os: 'OS X',
         os_version: 'Mojave',
+        supported: true
       },
       ie_14_windows: {
         base: 'BrowserStack',

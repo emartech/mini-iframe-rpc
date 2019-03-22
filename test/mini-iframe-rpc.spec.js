@@ -169,7 +169,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject.message.indexOf('could not be cloned') > -1).toBe(true);
+                expect(reject.cause.name).toBe('SendMessageError');
                 done();
             });
     });
@@ -181,7 +181,7 @@ describe('mini-iframe-rpc', function() {
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
-                expect(reject.message.indexOf('could not be cloned') > -1).toBe(true);
+                expect(reject.cause.name).toBe('DataCloneError');
                 done();
             });
     });

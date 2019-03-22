@@ -133,11 +133,10 @@ export class MiniIframeRPC {
         };
 
         const makeRequest = async () => {
-            await this.sendMessage(targetWindow, targetOrigin, requestMessageBody);
-
-            return new Promise((resolve, reject) => {
-                this.callbacks[requestMessageBody.callId] = {resolve, reject};
-            });
+            return this.sendMessage(targetWindow, targetOrigin, requestMessageBody).then(
+                () => new Promise((resolve, reject) => {
+                    this.callbacks[requestMessageBody.callId] = {resolve, reject};
+                }));
         }
 
         const handleResolve = (result?: any) => {
