@@ -7,7 +7,7 @@ module.exports = function(config) {
     frameworks: ['jasmine'],
     port: 9876,
     colors: true,
-    singleRun: true,
+    singleRun: false,
     reporters: ['mocha'],
     files: [
       {pattern: 'polyfill.min.js', included: true, watched: false},

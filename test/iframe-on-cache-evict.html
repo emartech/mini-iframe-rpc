@@ -21,10 +21,10 @@
                         // console.log('child recv', postMessage.data);
                     },
                     */
-                    'onResultCacheEviction': function (callId, evictedResult) {
-                        // console.log('cache evict', callId);
+                    'onResultCacheEviction': function (id, evictedResult) {
+                        // console.log('cache evict', id);
                         Promise.resolve(evictedResult).then(function(er) {
-                            window.childRPC.invoke(window.parent, null, 'onEvict', [callId, er])
+                            window.childRPC.invoke(window.parent, null, 'onEvict', [id, er])
                                 // Ignore InvocationErrors
                                 .catch(() => 0)
                         });

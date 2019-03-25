@@ -20,7 +20,7 @@ describe('on-cache-evict', function() {
         let onEvictCalled;
         TestBase.ready.then(() => {
             onEvictCalled = new Promise((resolve, reject) => {
-                window.parentRPC.register("onEvict", (callId, evictedResult) => {
+                window.parentRPC.register("onEvict", (id, evictedResult) => {
                     // first eviction (where evictionCount === 0) is result of appendScript
                     // we want the first eviction of a result to callme
                     if (evictionCount === 1) {

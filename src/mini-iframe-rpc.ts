@@ -1,30 +1,11 @@
 /* tslint:disable no-any no-unsafe-any */
 
-import {deserializeRemoteError, EvaluationError, InvocationError, isError, ProcedureNotFoundError, RemoteError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
+import {deserializeRemoteError, EvaluationError, InvocationError, isError, ProcedureNotFoundError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 import {DEFAULT_RESULT_CACHE_CAPACITY, ResultCache} from "./result-cache";
 export {ResultCache}; // so unit tests can access ResponseCache
+import {MessageBody, RequestMessageBody} from "./json-rpc";
+import {PostMessageTransport} from './transport/post-message-transport';
 
-interface RequestMessageBody  {
-    contents: "request";
-    callId: string;
-    procedureName: string;
-    argumentList: any[]
-}
-
-interface ResultMessageBody {
-    contents: "result";
-    callId: string;    
-    result: any
-}
-
-interface ErrorMessageBody {
-    contents: "error";
-    callId: string;
-    isErrorInstance: boolean;
-    errorValue: RemoteError;
-}
-
-type MessageBody = RequestMessageBody | ResultMessageBody | ErrorMessageBody;
 
 export interface InvocationOptions {
     timeout: number;
@@ -56,7 +37,6 @@ type ProcedureImplementation = (...args: any[]) => any;
 
 type ProcedureInvocationContext = {requestMessageBody: RequestMessageBody, messageSource: Window, messageOrigin: string};
 
-const RPC_MESSAGE_TYPE = "mini-iframe-rpc";
 const RANDOM_BASE = 36;
 const CALLID_LENGTH = 8;
 const DEFAULT_INVOCATION_OPTIONS:InvocationOptions = {
@@ -70,6 +50,7 @@ export class MiniIframeRPC {
     private callbacks: {[key:string]:CallbackFunctions} = {};
     private registeredProcedures:{[key:string]: ProcedureImplementation} = {};
     private resultCache:ResultCache;
+    private transport: PostMessageTransport;
 
     constructor(initParameters?: Partial<InitParameters>) {
         this.config = {
@@ -81,12 +62,14 @@ export class MiniIframeRPC {
         };
         this.resultCache = new ResultCache({
             capacity: this.config.resultCacheCapacity,
-            evictionCallback: (callId, result) => {
-                this.internalEventCallback("onResultCacheEviction", callId, result);
+            evictionCallback: (id, result) => {
+                this.internalEventCallback("onResultCacheEviction", id, result);
             }
         });
-        // attach listener
-        this.config.windowRef.addEventListener("message", this.recv);
+        this.transport = new PostMessageTransport(
+            this.config.windowRef,
+            this.recv,
+            {'originWhitelist': this.config.originWhitelist});        
     }        
 
     register(procedureName: string, implementation?: ProcedureImplementation): void {
@@ -98,21 +81,20 @@ export class MiniIframeRPC {
         }
     }
 
-    invoke (targetWindow: Window, targetOrigin: string | null, procedureName: string, argumentList?: any[], invocationOptions?: InvocationOptions): Promise<any> {
+    invoke (targetWindow: Window, targetOrigin: string | null, method: string, params?: any[], invocationOptions?: InvocationOptions): Promise<any> {
         const options = Object.assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
-        const callId = this.getNextCallId();
+        const id = this.getNextCallId();
         const requestMessageBody: RequestMessageBody = {
-            contents: "request",
-            callId,
-            procedureName,
-            argumentList: (argumentList || [])};
+            id,
+            method,
+            params: (params || [])};
 
         return this.requestWithRetry(targetWindow, targetOrigin, requestMessageBody, options);
     }
 
     close() {
         this.internalEventCallback("onClose");
-        this.config.windowRef.removeEventListener("message", this.recv);
+        this.transport.close();        
     }
 
     private requestWithRetry(targetWindow: Window, targetOrigin: string | null, requestMessageBody:RequestMessageBody, options: InvocationOptions):Promise<any> {
@@ -135,7 +117,7 @@ export class MiniIframeRPC {
         const makeRequest = async () => {
             return this.sendMessage(targetWindow, targetOrigin, requestMessageBody).then(
                 () => new Promise((resolve, reject) => {
-                    this.callbacks[requestMessageBody.callId] = {resolve, reject};
+                    this.callbacks[requestMessageBody.id] = {resolve, reject};
                 }));
         }
 
@@ -158,7 +140,7 @@ export class MiniIframeRPC {
                 // If error is non-retriable and there are no unanswered requests, give up.
                 } else {
                     completed = true;
-                    finalReject(new InvocationError(requestMessageBody.procedureName, reason, previousRejectReasons));
+                    finalReject(new InvocationError(requestMessageBody.method, reason, previousRejectReasons));
                 }
             }
             // if there are still outstanding requests, wait for them to succeed or fail.
@@ -210,94 +192,84 @@ export class MiniIframeRPC {
         return randomId;
     }
 
-    private sendMessage (targetWindow: Window, targetOrigin: string | null, messageBody: MessageBody) : Promise<void> {
-        return new Promise((resolve, reject) => {
-            const fullMessage = {
-                "type": RPC_MESSAGE_TYPE,
-                "message": messageBody
-            };
-            this.internalEventCallback("onSend", targetWindow, targetOrigin, fullMessage);
-            targetWindow.postMessage(fullMessage, targetOrigin || "*");
-            resolve();
-        });
+    private sendMessage (targetWindow: Window, targetOrigin: string | null, messageBody: MessageBody) : Promise<void> {        
+            this.internalEventCallback("onSend", messageBody, targetWindow, targetOrigin);
+
+            return this.transport.send(
+                {targetWindow, targetOrigin},
+                messageBody);
     }        
 
-    private async handleRequest (context:ProcedureInvocationContext) {
-        const callId = context.requestMessageBody.callId;
-        const procedureName = context.requestMessageBody.procedureName;
-        const argumentList = context.requestMessageBody.argumentList;
-        const responseOrigin = !context.messageOrigin || context.messageOrigin === "null" ? null : context.messageOrigin;
+    private async handleRequest (requestMessageBody:RequestMessageBody, messageSource: Window, messageOrigin: string) {
+        const id = requestMessageBody.id;
+        const method = requestMessageBody.method;
+        const params = requestMessageBody.params;
+        const responseOrigin = !messageOrigin || messageOrigin === "null" ? null : messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
             const sendingError = isError(rejectOrError);
 
             return this.sendMessage(
-                context.messageSource,
+                messageSource,
                 responseOrigin,
                 {
-                    contents: "error",
-                    callId,
+                    id,
                     isErrorInstance: sendingError,                    
-                    errorValue: sendingError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
+                    error: sendingError ? serializeRemoteError(rejectOrError, exceptionName) : rejectOrError
                 });
         };
         const getResult = () => {
-            if (this.resultCache.hasCachedResult(callId)) {
-                return this.resultCache.getCachedResult(callId);
+            if (this.resultCache.hasCachedResult(id)) {
+                return this.resultCache.getCachedResult(id);
             }
             const resultPromise = new Promise((resolve) => {
-                resolve(this.registeredProcedures[procedureName].apply(
-                    context,
-                    argumentList));
+                resolve(this.registeredProcedures[method].apply(
+                    {requestMessageBody, messageSource, messageOrigin},
+                    params));
                 });
-            this.resultCache.setCachedResult(callId, resultPromise);
+            this.resultCache.setCachedResult(id, resultPromise);
 
             return resultPromise;
         };
-        if (this.registeredProcedures[procedureName]) {            
+        if (this.registeredProcedures[method]) {            
             getResult()
                 .then(
                     (result?:any) => this.sendMessage(
-                        context.messageSource,
+                        messageSource,
                         responseOrigin,
                         {
-                            contents: "result",
-                            callId,
+                            id,
                             result
                         }).catch(error => sendError(error, SendMessageError.name))
                     ,
                     (error?:any) => sendError(error, EvaluationError.name)
                 );            
         } else {
-            sendError(new ProcedureNotFoundError({procedureName}));
+            sendError(new ProcedureNotFoundError({procedureName: method}));
         }
     }
 
-    private handleResponse(response: MessageBody) {
-        const callbackFunctions = this.callbacks[response.callId];
+    private handleResponse(messageBody: MessageBody) {
+        const callbackFunctions = this.callbacks[messageBody.id];
         if (callbackFunctions) {
-            delete this.callbacks[response.callId];                        
-            if (response.contents === "result") {
-                callbackFunctions.resolve(response.result);
-            } else if (response.contents === "error") {
-                const errorObject = response.isErrorInstance ? deserializeRemoteError(response.errorValue) : response.errorValue;
+            delete this.callbacks[messageBody.id];                        
+            if ('result' in messageBody) {
+                callbackFunctions.resolve(messageBody.result);
+            } else if ('error' in messageBody) {
+                const errorObject = messageBody.isErrorInstance ? deserializeRemoteError(messageBody.error) : messageBody.error;
                 callbackFunctions.reject(errorObject);
             }        
         } else {
-            this.internalEventCallback("onUnexpectedResponse", response);
+            this.internalEventCallback("onUnexpectedResponse", messageBody);
         }               
     }
 
-    private recv = (messageEvent: MessageEvent) => {
-        if ((this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) &&
-            messageEvent.data && messageEvent.data.type === RPC_MESSAGE_TYPE) {
-            this.internalEventCallback("onReceive", messageEvent);    
-            const requestMessageBody : MessageBody = messageEvent.data.message as MessageBody;
-            if (requestMessageBody.contents === "request") {
-                this.handleRequest({requestMessageBody, messageSource: messageEvent.source as Window, messageOrigin: messageEvent.origin});
-            } else {
-                this.handleResponse(requestMessageBody);
-            }            
-        }
+    private recv = (messageBody:MessageBody, messageSource: Window, messageOrigin: string) => {
+        this.internalEventCallback("onReceive", messageBody, messageSource, messageOrigin);    
+        if ('method' in messageBody) {
+            this.handleRequest(messageBody, messageSource, messageOrigin);
+        } else {
+            this.handleResponse(messageBody);
+        }            
     }
 
 } // end of class

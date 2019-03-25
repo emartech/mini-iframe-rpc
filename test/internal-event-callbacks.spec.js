@@ -15,9 +15,9 @@ describe('internal-event-callbacks', function() {
         TestBase.defaultAfterEach({done, parentRPC: window.parentRPC});
     });
 
-    const cleanCallId = (fullMessage) => {
-        let copy = Object.assign({}, fullMessage);
-        copy.message.callId = null;
+    const cleanCallId = (message) => {
+        let copy = Object.assign({}, message);
+        copy.id = null;
         return copy;
     }
 
@@ -42,17 +42,13 @@ describe('internal-event-callbacks', function() {
             let listenToOnReceive = false;
             window.parentRPC.close();
             window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
-                'onReceive': (postMessage) => {
+                'onReceive': (messageBody) => {
                     if (!listenToOnReceive) {
                         return;
                     }
-                    expect(cleanCallId(postMessage.data)).toEqual({
-                        type: 'mini-iframe-rpc',
-                        message: {
-                            contents: 'result',
-                            callId: null,
-                            result: true
-                        }
+                    expect(cleanCallId(messageBody)).toEqual({
+                        id: null,
+                        result: true
                     });
                     listenToOnReceive = false;
                     done();
@@ -71,21 +67,17 @@ describe('internal-event-callbacks', function() {
         TestBase.ready.then((child) => {
             let listenToOnSend = false;
             window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
-                'onSend': (targetWindow, targetOrigin, fullMessage) => {
+                'onSend': (messageBody, targetWindow, targetOrigin) => {
                     if (!listenToOnSend) {
                         return;
                     }
                     expect(targetWindow).toBe(child);
                     expect(targetOrigin).toEqual(child.location.origin);
-                    // update callId in fullMessage which is random
-                    expect(cleanCallId(fullMessage)).toEqual({
-                        type: 'mini-iframe-rpc',
-                        message: {
-                            contents: 'request',
-                            callId: null,
-                            procedureName: 'callmeB',
-                            argumentList: []
-                        }
+                    // update id in fullMessage which is random
+                    expect(cleanCallId(messageBody)).toEqual({
+                        id: null,
+                        method: 'callmeB',
+                        params: []
                     });
                     listenToOnSend = false;
                     done();
@@ -115,18 +107,17 @@ describe('internal-event-callbacks', function() {
         TestBase.ready.then(() => {
             let listenToOnReceive = false;
             window.parentRPC = new MiniIframeRPC({'eventCallbacks': {
-                'onReceive': (postMessage) => {
-                    // change callId so response cannot be matched with outgoing call.
+                'onReceive': (messageBody) => {
+                    // change id so response cannot be matched with outgoing call.
                     if (!listenToOnReceive) {
                         return;
                     }
-                    postMessage.data.message.callId = "asdf";
+                    messageBody.id = "asdf";
                     listenToOnReceive = false;
                 },
-                'onUnexpectedResponse': (response) => {
-                     expect(response).toEqual({
-                        contents: 'result',
-                        callId: 'asdf',
+                'onUnexpectedResponse': (messageBody) => {
+                     expect(messageBody).toEqual({
+                        id: 'asdf',
                         result: true
                     });
                     done();
@@ -152,14 +143,14 @@ describe('internal-event-callbacks', function() {
             receivedResponses = new Promise((resolve, reject) => {
                 window.parentRPC = new MiniIframeRPC({
                     'eventCallbacks': {
-                        'onSend': (targetWindow, targetOrigin, fullMessage) => {
+                        'onSend': (messageBody, targetWindow, targetOrigin) => {
                             if (listen) {
-                                sent.push(fullMessage.message);
+                                sent.push(messageBody);
                             }
                         },
-                        'onReceive': (postMessage) => {
-                            if (listen && sent.length > 0 && sent[0].callId === postMessage.data.message.callId) {
-                                received.push(postMessage.data.message);
+                        'onReceive': (messageBody) => {
+                            if (listen && sent.length > 0 && sent[0].id === messageBody.id) {
+                                received.push(messageBody);
                                 if (received.length === 2) {
                                     listen = false;
                                     resolve();
@@ -192,8 +183,8 @@ describe('internal-event-callbacks', function() {
                     expect(sent.length).toEqual(2);
                     // two responses received
                     expect(received.length).toEqual(2);
-                    // all have the same callId
-                    expect([sent[0].callId, sent[1].callId, received[0].callId, received[1].callId]).toEqual([sent[0].callId, sent[0].callId, sent[0].callId, sent[0].callId]);
+                    // all have the same id
+                    expect([sent[0].id, sent[1].id, received[0].id, received[1].id]).toEqual([sent[0].id, sent[0].id, sent[0].id, sent[0].id]);
                     // both responses have same result
                     expect([received[0].result, received[1].result, 0]).toEqual([0,0,0]);
                     // counter has only been incremented once

@@ -1,12 +1,28 @@
 /*eslint camelcase: 0*/
 
-/* Browserstack valid configurations: https://www.browserstack.com/automate/capabilities
+/* Browserstack valid configurations:
+ *      https://www.browserstack.com/automate/capabilities
+ *      https://www.browserstack.com/app-automate/capabilities#test-configuration-capabilities
  * Browser version histories: 
  * Chrome: https://en.wikipedia.org/wiki/Google_Chrome_version_history
  * Safari: https://en.wikipedia.org/wiki/Safari_version_history
  */
 
 const ALL = {
+      samsungGalaxyS5: {
+        base: 'BrowserStack',
+        os: 'android',
+        os_version: '4.4',
+        browser: 'android',
+        device: 'Samsung Galaxy S5',
+      },
+      iphone_x: {
+        base: 'BrowserStack',
+        device: 'iPhone X',
+        os: 'ios',
+        os_version: '11.0',
+        supported: true
+      },
       firefox_65_windows: {
         base: 'BrowserStack',
         browser: 'Firefox',
@@ -15,14 +31,14 @@ const ALL = {
         os_version: '10',
         supported: true
       },
-      chrome__56_osx: {
+      chrome_56_osx: {
         base: 'BrowserStack',
         browser: 'Chrome',
         browser_version: '56.0',
         os: 'OS X',
         os_version: 'Sierra',
       },
-      chrome__65_osx: { // oldest version which works, released 2018-3-6
+      chrome_65_osx: { // oldest version which works, released 2018-3-6
         base: 'BrowserStack',
         browser: 'Chrome',
         browser_version: '65.0',
@@ -84,7 +100,9 @@ const ENVS = {
     SUPPORTED: filter(x => x.supported),
     OSX: filter(x => x.os === 'OS X'),
     WINDOWS: filter(x => x.os === 'Windows'),
-    FIREFOX: filter(x => x.browser === 'Firefox')
+    FIREFOX: filter(x => x.browser === 'Firefox'),
+    IPHONE: filter(x => x.os === 'ios'),
+    ANDROID: filter(x => x.os === 'android')
 };
 
 const browserConfig =  {

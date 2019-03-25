@@ -14,7 +14,7 @@ const DEFAULT_PARAMETERS:ResultCacheParameters = {
 export class ResultCache {
 
     // tslint:disable-next-line:no-any
-    private callIds: string[] = [];
+    private ids: string[] = [];
     // tslint:disable-next-line:no-any
     private results: {[key:string]:any} = {};
     private config: ResultCacheParameters;
@@ -23,33 +23,33 @@ export class ResultCache {
         this.config = Object.assign({}, DEFAULT_PARAMETERS, config || {});
     }
 
-    hasCachedResult(callId:string) {
-        return this.results.hasOwnProperty(callId);
+    hasCachedResult(id:string) {
+        return this.results.hasOwnProperty(id);
     }
 
-    getCachedResult(callId:string) {
-        return this.results[callId];
+    getCachedResult(id:string) {
+        return this.results[id];
     }
 
     // tslint:disable-next-line:no-any
-    setCachedResult(callId:string, result:any) {
-        if (this.hasCachedResult(callId)) {
-            this.callIds = this.callIds.filter(c => c !== callId);
+    setCachedResult(id:string, result:any) {
+        if (this.hasCachedResult(id)) {
+            this.ids = this.ids.filter(c => c !== id);
         }
-        this.callIds.unshift(callId);
-        this.results[callId] = result;
+        this.ids.unshift(id);
+        this.results[id] = result;
         if (this.config.capacity >= 0) {
             this.enforceCapacity();
         }        
     }
 
     private enforceCapacity() {
-        for (let size = this.callIds.length; size > this.config.capacity; size--) {
-            const callId = this.callIds.pop()!;
-            const result = this.results[callId];
-            delete this.results[callId];
+        for (let size = this.ids.length; size > this.config.capacity; size--) {
+            const id = this.ids.pop()!;
+            const result = this.results[id];
+            delete this.results[id];
             if (this.config.evictionCallback) {
-                this.config.evictionCallback(callId, result);
+                this.config.evictionCallback(id, result);
             }
         }
     }

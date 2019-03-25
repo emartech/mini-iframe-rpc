@@ -6,7 +6,7 @@ describe('result-cache', function() {
         resultCache.setCachedResult('a', 1);
         resultCache.setCachedResult('b', 2);
         resultCache.setCachedResult('c', 3);
-        expect(resultCache.callIds.length).toEqual(2);
+        expect(resultCache.ids.length).toEqual(2);
         expect(resultCache.hasCachedResult('a')).toEqual(false);
         expect(resultCache.hasCachedResult('b')).toEqual(true);
         expect(resultCache.hasCachedResult('c')).toEqual(true);
