@@ -1,7 +1,19 @@
 import {MessageBody} from '../json-rpc';
 import {Recipient, TransportConfig, TransportInterface} from './transport';
 
+const isInternetExplorer = () => (
+    // based on https://stackoverflow.com/questions/24861073/detect-if-any-kind-of-ie-msie/24861307#24861307    
+    navigator.appName === 'Microsoft Internet Explorer' || 
+    !!navigator.userAgent.match(/MSIE/) ||
+    !!navigator.userAgent.match(/Trident/) ||
+    !!navigator.userAgent.match(/rv:11/));
+
 const POSTMESSAGE_TYPE = "mini-iframe-rpc";
+
+const DEFAULT_CONFIG:TransportConfig = {
+    // IE needs postmessages to contain strings instead of objects
+    stringifyObjects: isInternetExplorer()
+};
 
 export type OnReceive = (messageBody:MessageBody, messageSource: Window, messageOrigin: string) => void;
 
@@ -11,10 +23,10 @@ export class PostMessageTransport implements TransportInterface{
     private config: TransportConfig;
     private onReceive: OnReceive;
 
-    constructor(windowRef: Window, onReceive: OnReceive, config?: TransportConfig) {
+    constructor(windowRef: Window, onReceive: OnReceive, config?: Partial<TransportConfig>) {
         this.windowRef = windowRef || window;
         this.onReceive = onReceive;
-        this.config = Object.assign({}, config || {});
+        this.config = Object.assign({}, DEFAULT_CONFIG, config || {});
         this.windowRef.addEventListener("message", this.recv);
     }
 
@@ -28,19 +40,23 @@ export class PostMessageTransport implements TransportInterface{
                 "type": POSTMESSAGE_TYPE,
                 "payload": messageBody
             };
-            recipient.targetWindow.postMessage(envelopedMessage, recipient.targetOrigin || "*");
+            recipient.targetWindow.postMessage(
+                this.config.stringifyObjects ? JSON.stringify(envelopedMessage) : envelopedMessage,
+                recipient.targetOrigin || "*");
             resolve();
         });
     };
 
     private recv = (messageEvent: MessageEvent) => {
         if (
-            (!this.config.originWhitelist || this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) &&
-            messageEvent.data && messageEvent.data.type === POSTMESSAGE_TYPE && messageEvent.data.payload) {
-            this.onReceive(
-                messageEvent.data.payload,
-                messageEvent.source as Window,
-                messageEvent.origin);
+            (!this.config.originWhitelist || this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) && messageEvent.data) {
+            const messageData = typeof messageEvent.data === 'string' ? JSON.stringify(messageEvent.data) : messageEvent.data;
+            if (messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
+                this.onReceive(
+                    messageData.payload,
+                    messageEvent.source as Window,
+                    messageEvent.origin);
+            }            
         }
         // otherwise drop the message silently
     }
