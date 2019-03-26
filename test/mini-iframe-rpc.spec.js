@@ -114,18 +114,18 @@ describe('mini-iframe-rpc', function() {
 
     it('does not receive messages after close() called', function(done) {
         TestBase.ready.then((child) => 
-            TestBase.onScriptRun('childRPC.register("callme", function() {return window.isChild;});')
+            TestBase.onScriptRun('childRPC.register("callmeCloseTest", function() {return window.isChild;});')
             // first call OK, because procedure is registered
-        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {'timeout': 100})
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callmeCloseTest", [], {'timeout': 100})
         ).then((result) => expect(result).toEqual('child')
-        ).then(() => window.parentRPC.invoke(TestBase.childWindow(), null, 'close')
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, 'close')
             // after child RPC closed, same call results in timeout
-        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {'timeout': 100})
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callmeCloseTest", [], {'timeout': 100})
         ).then(
             (result) => done(new Error('Promise should not be resolved')),
             (reject) => {
                 expect(reject.name).toEqual('InvocationError');
-                expect(reject.procedureName).toEqual('callme');
+                expect(reject.procedureName).toEqual('callmeCloseTest');
                 expect(reject.cause.name).toEqual('TimeoutError');
                 expect(reject.cause.message).toEqual('Timeout after 100 ms.');
                 done();

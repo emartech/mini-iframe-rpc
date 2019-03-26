@@ -164,12 +164,12 @@ describe('internal-event-callbacks', function() {
             });
             return TestBase.onScriptRun(`
                 (function() {
-                    const timeouts = [120, 80];
+                    var timeouts = [120, 80];
                     window.counter=0;
-                    childRPC.register("callmeD", function() {return new Promise((resolve, reject) => {
-                        const currentValue = counter;
+                    window.childRPC.register("callmeD", function() {return new Promise(function(resolve, reject) {
+                        var currentValue = window.counter;
                         window.setTimeout(
-                            () => resolve(currentValue),
+                            function() {return resolve(currentValue);},
                             timeouts[currentValue]);
                         window.counter++;
                         });

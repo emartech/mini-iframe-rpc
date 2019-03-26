@@ -134,8 +134,8 @@ describe('retries', function() {
                 (function() {
                     var timeouts = [120, 80];
                     var counter=0;
-                    childRPC.register("callme", function() {return new Promise((resolve, reject) => {
-                        const currentValue = counter;
+                    childRPC.register("callme", function() {return new Promise(function(resolve, reject) {
+                        var currentValue = counter;
                         window.setTimeout(
                             function() {return resolve(currentValue);},
                             timeouts[currentValue]);
