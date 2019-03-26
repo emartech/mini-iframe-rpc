@@ -54,7 +54,7 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            TestBase.onScriptRun('childRPC.register("callmeA", () => window.isChild);').then(() => {
+            TestBase.onScriptRun('childRPC.register("callmeA", function() {return window.isChild;});').then(() => {
                 listenToOnReceive = true;
                 parentRPC.invoke(TestBase.childWindow(), window.location.origin, "callmeA").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
@@ -83,11 +83,13 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            TestBase.onScriptRun('childRPC.register("callmeB", () => window.isChild);').then(() =>  {
+            TestBase.onScriptRun('childRPC.register("callmeB", function() {return window.isChild;});').then(() =>  {
                 listenToOnSend = true;
                 parentRPC.invoke(child, window.location.origin, "callmeB").then((result) => {
                     done(new Error('onSend should be called before RPC call completes'));
-                }).catch(() => 0); // ignore errors stemming from call not answered
+                }).then(
+                    undefined,
+                    function () {return 0;}); // ignore errors stemming from call not answered
             });
         });
     });
@@ -123,7 +125,7 @@ describe('internal-event-callbacks', function() {
                     done();
                 }
             }});
-            TestBase.onScriptRun('childRPC.register("callmeC", () => window.isChild);').then(() => {
+            TestBase.onScriptRun('childRPC.register("callmeC", function() {return window.isChild;});').then(() => {
                 listenToOnReceive = true;
                 parentRPC.invoke(TestBase.childWindow(), window.location.origin, "callmeC").then((result) => {
                     done(new Error('onReceive should be called before RPC call completes'));
@@ -164,14 +166,14 @@ describe('internal-event-callbacks', function() {
                 (function() {
                     const timeouts = [120, 80];
                     window.counter=0;
-                    childRPC.register("callmeD", () => new Promise((resolve, reject) => {
+                    childRPC.register("callmeD", function() {return new Promise((resolve, reject) => {
                         const currentValue = counter;
                         window.setTimeout(
                             () => resolve(currentValue),
                             timeouts[currentValue]);
                         window.counter++;
-                        })
-                    );
+                        });
+                    });
                 })();`);
             }).then(() => {
                 listen = true;

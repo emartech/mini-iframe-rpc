@@ -17,6 +17,7 @@ const testBase = {
         // inject the HTML fixture for the tests
         const iframe = document.createElement('iframe');
         iframe.src = src || "base/iframe.html";
+        // safari requires allow-same-origin for a bunch of tests chrome doesn't need it for...
         iframe.sandbox = sandbox || "allow-scripts allow-same-origin";
         iframe.id = "childIframe";
         testBase.ready = new Promise((resolve, _reject) => {

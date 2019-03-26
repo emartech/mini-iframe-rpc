@@ -4,9 +4,7 @@ import {Recipient, TransportConfig, TransportInterface} from './transport';
 const isInternetExplorer = () => (
     // based on https://stackoverflow.com/questions/24861073/detect-if-any-kind-of-ie-msie/24861307#24861307    
     navigator.appName === 'Microsoft Internet Explorer' || 
-    !!navigator.userAgent.match(/MSIE/) ||
-    !!navigator.userAgent.match(/Trident/) ||
-    !!navigator.userAgent.match(/rv:11/));
+    !!navigator.userAgent.match(/Trident|MSIE|rv:11/));
 
 const POSTMESSAGE_TYPE = "mini-iframe-rpc";
 
@@ -50,7 +48,7 @@ export class PostMessageTransport implements TransportInterface{
     private recv = (messageEvent: MessageEvent) => {
         if (
             (!this.config.originWhitelist || this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) && messageEvent.data) {
-            const messageData = typeof messageEvent.data === 'string' ? JSON.stringify(messageEvent.data) : messageEvent.data;
+            const messageData = (typeof messageEvent.data === 'string' && JSON) ? JSON.parse(messageEvent.data) : messageEvent.data;
             if (messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
                 this.onReceive(
                     messageData.payload,

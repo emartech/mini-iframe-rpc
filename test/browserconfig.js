@@ -101,6 +101,7 @@ const ENVS = {
     OSX: filter(x => x.os === 'OS X'),
     WINDOWS: filter(x => x.os === 'Windows'),
     FIREFOX: filter(x => x.browser === 'Firefox'),
+    MSIE: filter(x => x.browser === 'IE'),
     IPHONE: filter(x => x.os === 'ios'),
     ANDROID: filter(x => x.os === 'android')
 };

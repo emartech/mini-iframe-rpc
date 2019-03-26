@@ -23,7 +23,7 @@ describe('retries', function() {
         TestBase.ready.then(() => TestBase.onScriptRun(`
             (function() {
                 let counter=0;
-                childRPC.register("callme", () => Promise.reject(counter++));
+                childRPC.register("callme", function() {return Promise.reject(counter++);});
             })();`)
             ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {timeout: 20, retryLimit: retryLimit, retryAllFailures: true})
             ).then(
@@ -61,8 +61,8 @@ describe('retries', function() {
             });
             TestBase.onScriptRun(`
                 (function() {
-                    let counter=${retryLimit};
-                    childRPC.register("callme", () => Promise[counter > 0 ? 'reject' : 'resolve'](counter--));
+                    var counter=${retryLimit};
+                    childRPC.register("callme", function() {return Promise[counter > 0 ? 'reject' : 'resolve'](counter--);});
                 })();`);
             }).then(() => {
                 listen = true;
@@ -94,12 +94,12 @@ describe('retries', function() {
                     }}});
             TestBase.onScriptRun(`
                 (function() {
-                    let counter=${retryLimit}+1;
-                    childRPC.register("callme", () => {
+                    var counter=${retryLimit}+1;
+                    childRPC.register("callme", function() {
                         counter--;
                         if (counter > 0) {
                             // returns promise which never resolves or rejects
-                            return new Promise((_1, _2) => {});
+                            return new Promise(function (_1, _2) {return {};});
                         }
                         return counter;
                     });
@@ -132,16 +132,16 @@ describe('retries', function() {
                     }}});
             TestBase.onScriptRun(`
                 (function() {
-                    const timeouts = [120, 80];
-                    let counter=0;
-                    childRPC.register("callme", () => new Promise((resolve, reject) => {
+                    var timeouts = [120, 80];
+                    var counter=0;
+                    childRPC.register("callme", function() {return new Promise((resolve, reject) => {
                         const currentValue = counter;
                         window.setTimeout(
-                            () => resolve(currentValue),
+                            function() {return resolve(currentValue);},
                             timeouts[currentValue]);
                         counter++;
-                        })
-                    );
+                        });
+                    });
                 })();`);
             }).then(() => {
                 listen = true;
@@ -172,8 +172,8 @@ describe('retries', function() {
             TestBase.onScriptRun(`
                 window.initChildRPC({resultCacheCapacity: 20});
                 (function() {
-                    let counter=0;
-                    window.childRPC.register("callme", () => Promise.reject(counter++));
+                    var counter=0;
+                    window.childRPC.register("callme", function() {return Promise.reject(counter++);});
                 })();`);
             }).then(() => window.parentRPC.invoke(TestBase.childWindow(), null, "callme", [], {timeout: 100, retryLimit: retryLimit})
             ).then(

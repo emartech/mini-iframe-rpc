@@ -32,7 +32,7 @@ describe('on-cache-evict', function() {
             return TestBase.onScriptRun(`
                 (function() {
                     let counter=0;
-                    return window.childRPC.register("callme", () => {
+                    return window.childRPC.register("callmeOnEvict", function() {
                         return counter++;
                     });
                 })();
@@ -40,7 +40,7 @@ describe('on-cache-evict', function() {
         }).then(() => {
             var results = [];
             for (let i = 0; i < 3; i++) {
-                results.push(parentRPC.invoke(TestBase.childWindow(), null, "callme", []));
+                results.push(parentRPC.invoke(TestBase.childWindow(), null, "callmeOnEvict", []));
             }
             Promise.all([onEvictCalled, Promise.all(results)]).then(r => {
                 expect(r[0]).toEqual(0);
