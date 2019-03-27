@@ -4,13 +4,13 @@ export interface ResultCacheParameters {
 }
 export declare const DEFAULT_RESULT_CACHE_CAPACITY = 200;
 export declare class ResultCache {
-    private callIds;
+    private ids;
     private results;
     private config;
     constructor(config?: Partial<ResultCacheParameters>);
-    hasCachedResult(callId: string): boolean;
-    getCachedResult(callId: string): any;
-    setCachedResult(callId: string, result: any): void;
+    hasCachedResult(id: string): boolean;
+    getCachedResult(id: string): any;
+    setCachedResult(id: string, result: any): void;
     private enforceCapacity;
 }
 //# sourceMappingURL=result-cache.d.ts.map

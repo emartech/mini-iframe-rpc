@@ -22,9 +22,10 @@ export declare class MiniIframeRPC {
     private callbacks;
     private registeredProcedures;
     private resultCache;
-    constructor(initParameters?: InitParameters);
+    private transport;
+    constructor(initParameters?: Partial<InitParameters>);
     register(procedureName: string, implementation?: ProcedureImplementation): void;
-    invoke(targetWindow: Window, targetOrigin: string | null, procedureName: string, argumentList?: any[], invocationOptions?: InvocationOptions): Promise<any>;
+    invoke(targetWindow: Window, targetOrigin: string | null, method: string, params?: any[], invocationOptions?: InvocationOptions): Promise<any>;
     close(): void;
     private requestWithRetry;
     private internalEventCallback;
