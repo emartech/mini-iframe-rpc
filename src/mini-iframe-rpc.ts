@@ -82,7 +82,7 @@ export class MiniIframeRPC {
     }
 
     invoke (targetWindow: Window, targetOrigin: string | null, method: string, params?: any[], invocationOptions?: InvocationOptions): Promise<any> {
-        const options = Object.assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
+        const options = Object.assign({}, this.config.defaultInvocationOptions, invocationOptions || {});
         const id = this.getNextCallId();
         const requestMessageBody: RequestMessageBody = {
             id,
@@ -251,12 +251,12 @@ export class MiniIframeRPC {
     private handleResponse(messageBody: MessageBody) {
         const callbackFunctions = this.callbacks[messageBody.id];
         if (callbackFunctions) {
-            delete this.callbacks[messageBody.id];                        
-            if ('result' in messageBody) {
-                callbackFunctions.resolve(messageBody.result);
-            } else if ('error' in messageBody) {
+            delete this.callbacks[messageBody.id];                                    
+            if ('isErrorInstance' in messageBody) {
                 const errorObject = messageBody.isErrorInstance ? deserializeRemoteError(messageBody.error) : messageBody.error;
                 callbackFunctions.reject(errorObject);
+            } else if ('result' in messageBody) {
+                callbackFunctions.resolve(messageBody.result);
             }        
         } else {
             this.internalEventCallback("onUnexpectedResponse", messageBody);

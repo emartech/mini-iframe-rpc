@@ -39,7 +39,7 @@ export class PostMessageTransport implements TransportInterface{
                 "payload": messageBody
             };
             recipient.targetWindow.postMessage(
-                this.config.stringifyObjects ? JSON.stringify(envelopedMessage) : envelopedMessage,
+                this.config.stringifyObjects ? JSON.stringify(envelopedMessage, (_k,v) => v === undefined ? null : v) : envelopedMessage,
                 recipient.targetOrigin || "*");
             resolve();
         });

@@ -67,6 +67,7 @@ const ALL = {
         os_version: '10',
         browser: 'IE',
         browser_version: '11.0',
+        supported: true
       },
       firefox_52_windows: {
         base: 'BrowserStack',
@@ -102,6 +103,7 @@ const ENVS = {
     WINDOWS: filter(x => x.os === 'Windows'),
     FIREFOX: filter(x => x.browser === 'Firefox'),
     MSIE: filter(x => x.browser === 'IE'),
+    EDGE: filter(x => x.browser === 'Edge'),
     IPHONE: filter(x => x.os === 'ios'),
     ANDROID: filter(x => x.os === 'android')
 };
@@ -110,7 +112,7 @@ const browserConfig =  {
   browserstack: {
     user: process.env.BROWSERSTACK_USER,
     key: process.env.BROWSERSTACK_KEY,
-    envs: (process.env.BROWSERSTACK_ENVS && ENVS[process.env.BROWSERSTACK_ENVS]) ? ENVS[process.env.BROWSERSTACK_ENVS] : ALL}
+    envs: (process.env.BROWSERSTACK_ENVS && ENVS[process.env.BROWSERSTACK_ENVS]) ? ENVS[process.env.BROWSERSTACK_ENVS] : ENVS['SUPPORTED']}
 };
 
 module.exports = browserConfig;
