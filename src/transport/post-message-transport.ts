@@ -45,11 +45,25 @@ export class PostMessageTransport implements TransportInterface{
         });
     };
 
+    // tslint:disable-next-line:no-any
+    private readMessageData(messageEvent: MessageEvent):any {
+        if (typeof messageEvent.data === 'string' && JSON) {
+            try {
+                return JSON.parse(messageEvent.data);
+            } catch (e) {
+                // JSON parse error, silently discard message
+                return null;
+            }
+        }
+
+        return messageEvent.data;
+    }
+    
     private recv = (messageEvent: MessageEvent) => {
         if (
             (!this.config.originWhitelist || this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) && messageEvent.data) {
-            const messageData = (typeof messageEvent.data === 'string' && JSON) ? JSON.parse(messageEvent.data) : messageEvent.data;
-            if (messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
+            const messageData = this.readMessageData(messageEvent);
+            if (messageData && messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
                 this.onReceive(
                     messageData.payload,
                     messageEvent.source as Window,
