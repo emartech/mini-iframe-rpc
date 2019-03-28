@@ -2,7 +2,7 @@
   "name": "mini-iframe-rpc",
   "description": "RPC across iframes using postMessage API",
   "version": "1.2.0",
-  "main": "lib/mini_iframe_rpc.js",
+  "main": "lib/mini-iframe-rpc.js",
   "scripts": {
     "build": "webpack --env development && webpack --env production",
     "test": "npm run lint && npm run unit",
