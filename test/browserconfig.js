@@ -59,7 +59,8 @@ const ALL = {
         os: 'Windows',
         os_version: '10',
         browser: 'Edge',
-        browser_version: '14.0',
+        browser_version: '18.0',
+        supported: true
       },
       ie_11_windows: {
         base: 'BrowserStack',
