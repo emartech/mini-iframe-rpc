@@ -5,8 +5,9 @@ Mini-iframe-rpc implements JSON-RPC 2.0 as specified at https://www.jsonrpc.org/
 with a few key differences:
     - the "jsonrpc" field is ommitted because mini-iframe-rpc is assumed to always communicate
       with itself, thus the protocol is understood to be jsonrpc.
-    - In the request, the parameters ("params" field) must contain an array.
-      If the remote procedure expects an object, place the object within an array.
+    - In the request, the parameters ("params" field) may contain any value.
+      Arrays are detected and treated as positional parameters. Every other value
+      is passed in as is except undefined, which is replaced by an empty array.
       We do this so the semantics of regular JS function calls are followed in the rpc interace.
     - Notifications are not supported. There will always be a response (which can be undefined).
       If you don't need a response, just send a postMessage (no need for mini-iframe-rpc).
@@ -28,7 +29,7 @@ export interface RequestMessageBody  {
     id: string;
     method: string;
     // tslint:disable-next-line:no-any
-    params: any[]
+    params: any
 }
 
 export interface ResponseMessageBody {

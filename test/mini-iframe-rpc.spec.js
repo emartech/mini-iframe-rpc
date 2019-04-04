@@ -54,6 +54,26 @@ describe('mini-iframe-rpc', function() {
         });
     });
 
+    it('can properly pass complex arguments not wrapped in array', function(done) {
+        TestBase.ready.then((child) => TestBase.onScriptRun(`
+            window.childRPC.register("add", function (input) {
+                var acc = 0;
+                for (var i in input) {
+                    if (input.hasOwnProperty(i)) {
+                        acc += input[i];
+                    }
+                }
+                return acc;
+            }); 
+            `)
+        ).then(() => parentRPC.invoke(TestBase.childWindow(), null, "add", {"a": 1, "b": 2, "c": 3})
+        ).then((result) => {
+            expect(result).toBe(6);
+            done();
+        });
+    });
+
+
     it('can return complex parameters', function(done) {
         const obj = {"a": 1, "b": [1,2,3], "c": false};
         TestBase.ready.then((child) => {

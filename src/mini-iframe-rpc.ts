@@ -200,10 +200,27 @@ export class MiniIframeRPC {
                 messageBody);
     }        
 
+    private isArray(arg:any) {
+        // Array.isArray doesn't work in IE8 and doesn't necessarily work cross-window
+        // from: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray
+        return Object.prototype.toString.call(arg) === '[object Array]';   
+    }
+
+    private unpackParams(params:any) {
+        if (this.isArray(params)) {
+            return params;
+        }
+        if (params === undefined) {
+            return [];
+        }
+
+        return [params];
+    }
+
     private async handleRequest (requestMessageBody:RequestMessageBody, messageSource: Window, messageOrigin: string) {
         const id = requestMessageBody.id;
         const method = requestMessageBody.method;
-        const params = requestMessageBody.params;
+        const params = this.unpackParams(requestMessageBody.params);
         const responseOrigin = !messageOrigin || messageOrigin === "null" ? null : messageOrigin;
         const sendError = (rejectOrError: any, exceptionName?:string) => {
             const sendingError = isError(rejectOrError);
