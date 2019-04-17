@@ -47,7 +47,7 @@ export class PostMessageTransport implements TransportInterface{
 
     // tslint:disable-next-line:no-any
     private readMessageData(messageEvent: MessageEvent):any {
-        if (typeof messageEvent.data === 'string' && JSON) {
+        if (typeof messageEvent.data === 'string' && JSON && isInternetExplorer()) {
             try {
                 return JSON.parse(messageEvent.data);
             } catch (e) {
