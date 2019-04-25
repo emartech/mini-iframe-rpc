@@ -8,6 +8,7 @@ export declare class PostMessageTransport implements TransportInterface {
     constructor(windowRef: Window, onReceive: OnReceive, config?: Partial<TransportConfig>);
     close(): void;
     send(recipient: Recipient, messageBody: MessageBody): Promise<void>;
+    private readMessageData;
     private recv;
 }
 //# sourceMappingURL=post-message-transport.d.ts.map
