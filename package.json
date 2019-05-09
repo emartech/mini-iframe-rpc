@@ -56,5 +56,7 @@
     "sourceMap": false,
     "instrument": false
   },
-  "dependencies": {}
+  "dependencies": {
+    "mdn-polyfills": "^5.16.0"
+  }
 }

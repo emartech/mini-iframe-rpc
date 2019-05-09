@@ -1,3 +1,4 @@
+import 'mdn-polyfills/Object.assign';
 import { ResultCache } from "./result-cache";
 export { ResultCache };
 export interface InvocationOptions {

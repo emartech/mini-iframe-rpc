@@ -1,5 +1,6 @@
 /* tslint:disable no-any no-unsafe-any */
 
+import 'mdn-polyfills/Object.assign';
 import {deserializeRemoteError, EvaluationError, InvocationError, isError, ProcedureNotFoundError, SendMessageError, serializeRemoteError, TimeoutError} from './errors';
 import {DEFAULT_RESULT_CACHE_CAPACITY, ResultCache} from "./result-cache";
 export {ResultCache}; // so unit tests can access ResponseCache
