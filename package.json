@@ -1,24 +1,23 @@
 {
-  "name": "mini-iframe-rpc",
+  "name": "@emartech/mini-iframe-rpc",
   "description": "RPC across iframes using postMessage API",
-  "version": "1.3.4",
   "main": "lib/mini-iframe-rpc.js",
   "scripts": {
     "build": "webpack --env development && webpack --env production",
-    "test": "npm run lint && npm run unit",
-    "unit": "karma start test/karma.conf.js",
-    "lint": "tslint -p ."
+    "test": "karma start test/karma.conf.js",
+    "lint": "tslint -p .",
+    "semantic-release": "semantic-release",
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neumark/mini-iframe-rpc.git"
+    "url": "git+https://github.com/emartech/mini-iframe-rpc.git"
   },
-  "author": "Peter Neumark",
-  "license": "Apache-2.0",
+  "author": "Emarsys",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/neumark/mini-iframe-rpc/issues"
+    "url": "https://github.com/emartech/mini-iframe-rpc/issues"
   },
-  "homepage": "https://github.com/neumark/mini-iframe-rpc",
+  "homepage": "https://github.com/emartech/mini-iframe-rpc",
   "devDependencies": {
     "@babel/cli": "7.4.4",
     "@babel/core": "7.4.4",
