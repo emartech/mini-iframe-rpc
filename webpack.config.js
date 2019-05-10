@@ -23,7 +23,7 @@ const config = {
   entry: __dirname + '/src/'+libraryName+'.ts',
   devtool: devtool,
   output: {
-    path: __dirname + '/lib',
+    path: __dirname + '/dist',
     filename: outputFile,
     library: libraryName,
     libraryTarget: 'umd',
