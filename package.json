@@ -8,6 +8,9 @@
     "lint": "tslint -p .",
     "semantic-release": "semantic-release"
   },
+  "release": {
+    "branch": "production"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/emartech/mini-iframe-rpc.git"
