@@ -6,7 +6,7 @@
     "build": "webpack --env development && webpack --env production",
     "test": "karma start test/karma.conf.js",
     "lint": "tslint -p .",
-    "semantic-release": "semantic-release",
+    "semantic-release": "semantic-release"
   },
   "repository": {
     "type": "git",
