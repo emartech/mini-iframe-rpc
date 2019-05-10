@@ -4,11 +4,12 @@ Simple Javascript library for postMessage-based inter iframe (or window) communi
 
 ## Installation
 
-    npm install --save mini-iframe-rpc
+    npm install --save @emartech/mini-iframe-rpc
 
 ## Building and testing
 
     npm run build
+    npm run test
 
 ## Usage
 
