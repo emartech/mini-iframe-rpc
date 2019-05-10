@@ -1,75 +1,77 @@
-import {MessageBody} from '../json-rpc';
-import {Recipient, TransportConfig, TransportInterface} from './transport';
+import { MessageBody } from '../json-rpc';
+import { Recipient, TransportConfig, TransportInterface } from './transport';
 
-const isInternetExplorer = () => (
-    // based on https://stackoverflow.com/questions/24861073/detect-if-any-kind-of-ie-msie/24861307#24861307    
-    navigator.appName === 'Microsoft Internet Explorer' || 
-    !!navigator.userAgent.match(/Trident|MSIE|rv:11/));
+const isInternetExplorer = () =>
+  // based on https://stackoverflow.com/questions/24861073/detect-if-any-kind-of-ie-msie/24861307#24861307
+  navigator.appName === 'Microsoft Internet Explorer' || !!navigator.userAgent.match(/Trident|MSIE|rv:11/);
 
-const POSTMESSAGE_TYPE = "mini-iframe-rpc";
+const POSTMESSAGE_TYPE = 'mini-iframe-rpc';
 
-const DEFAULT_CONFIG:TransportConfig = {
-    // IE needs postmessages to contain strings instead of objects
-    stringifyObjects: isInternetExplorer()
+const DEFAULT_CONFIG: TransportConfig = {
+  // IE needs postmessages to contain strings instead of objects
+  stringifyObjects: isInternetExplorer()
 };
 
-export type OnReceive = (messageBody:MessageBody, messageSource: Window, messageOrigin: string) => void;
+export type OnReceive = (messageBody: MessageBody, messageSource: Window, messageOrigin: string) => void;
 
-export class PostMessageTransport implements TransportInterface{
+export class PostMessageTransport implements TransportInterface {
+  private windowRef: Window;
+  private config: TransportConfig;
+  private onReceive: OnReceive;
 
-    private windowRef: Window;
-    private config: TransportConfig;
-    private onReceive: OnReceive;
+  public constructor(windowRef: Window, onReceive: OnReceive, config?: Partial<TransportConfig>) {
+    this.windowRef = windowRef || window;
+    this.onReceive = onReceive;
+    this.config = Object.assign({}, DEFAULT_CONFIG, config || {});
+    this.windowRef.addEventListener('message', this.recv);
+  }
 
-    constructor(windowRef: Window, onReceive: OnReceive, config?: Partial<TransportConfig>) {
-        this.windowRef = windowRef || window;
-        this.onReceive = onReceive;
-        this.config = Object.assign({}, DEFAULT_CONFIG, config || {});
-        this.windowRef.addEventListener("message", this.recv);
+  public close() {
+    this.windowRef.removeEventListener('message', this.recv);
+  }
+
+  public send(recipient: Recipient, messageBody: MessageBody): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const envelopedMessage = {
+        type: POSTMESSAGE_TYPE,
+        payload: messageBody
+      };
+      recipient.targetWindow.postMessage(
+        this.config.stringifyObjects
+          ? JSON.stringify(envelopedMessage, (_k, v) => (v === undefined ? null : v))
+          : envelopedMessage,
+        recipient.targetOrigin || '*'
+      );
+      resolve();
+    });
+  }
+
+  // tslint:disable-next-line:no-any
+  private readMessageData(messageEvent: MessageEvent): any {
+    if (typeof messageEvent.data === 'string' && JSON && isInternetExplorer()) {
+      try {
+        return JSON.parse(messageEvent.data);
+      } catch (e) {
+        // JSON parse error, silently discard message
+        return null;
+      }
     }
 
-    close() {
-        this.windowRef.removeEventListener("message", this.recv);
-    }
+    return messageEvent.data;
+  }
 
-    send (recipient:Recipient, messageBody: MessageBody): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const envelopedMessage = {
-                "type": POSTMESSAGE_TYPE,
-                "payload": messageBody
-            };
-            recipient.targetWindow.postMessage(
-                this.config.stringifyObjects ? JSON.stringify(envelopedMessage, (_k,v) => v === undefined ? null : v) : envelopedMessage,
-                recipient.targetOrigin || "*");
-            resolve();
-        });
-    };
-
-    // tslint:disable-next-line:no-any
-    private readMessageData(messageEvent: MessageEvent):any {
-        if (typeof messageEvent.data === 'string' && JSON && isInternetExplorer()) {
-            try {
-                return JSON.parse(messageEvent.data);
-            } catch (e) {
-                // JSON parse error, silently discard message
-                return null;
-            }
-        }
-
-        return messageEvent.data;
+  private recv = (messageEvent: MessageEvent) => {
+    if (
+      (!this.config.originWhitelist ||
+        this.config.originWhitelist.length < 1 ||
+        this.config.originWhitelist.indexOf(messageEvent.origin) > -1) &&
+      messageEvent.data
+    ) {
+      const messageData = this.readMessageData(messageEvent);
+      if (messageData && messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
+        this.onReceive(messageData.payload, messageEvent.source as Window, messageEvent.origin);
+      }
     }
-    
-    private recv = (messageEvent: MessageEvent) => {
-        if (
-            (!this.config.originWhitelist || this.config.originWhitelist.length < 1 || this.config.originWhitelist.indexOf(messageEvent.origin) > -1) && messageEvent.data) {
-            const messageData = this.readMessageData(messageEvent);
-            if (messageData && messageData.type === POSTMESSAGE_TYPE && messageData.payload) {
-                this.onReceive(
-                    messageData.payload,
-                    messageEvent.source as Window,
-                    messageEvent.origin);
-            }            
-        }
-        // otherwise drop the message silently
-    }
+    // otherwise drop the message silently
+  };
 }

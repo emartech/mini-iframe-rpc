@@ -1,4 +1,4 @@
-import {RemoteError} from './errors';
+import { RemoteError } from './errors';
 
 /*
 Mini-iframe-rpc implements JSON-RPC 2.0 as specified at https://www.jsonrpc.org/specification
@@ -25,23 +25,23 @@ with a few key differences:
     
 */
 
-export interface RequestMessageBody  {
-    id: string;
-    method: string;
-    // tslint:disable-next-line:no-any
-    params: any
+export interface RequestMessageBody {
+  id: string;
+  method: string;
+  // tslint:disable-next-line:no-any
+  params: any;
 }
 
 export interface ResponseMessageBody {
-    id: string;    
-    // tslint:disable-next-line:no-any
-    result: any
+  id: string;
+  // tslint:disable-next-line:no-any
+  result: any;
 }
 
 export interface ErrorMessageBody {
-    id: string;
-    isErrorInstance: boolean;
-    error: RemoteError;
+  id: string;
+  isErrorInstance: boolean;
+  error: RemoteError;
 }
 
 export type MessageBody = RequestMessageBody | ResponseMessageBody | ErrorMessageBody;

@@ -1,11 +1,10 @@
-import {MiniIframeError} from './mini-iframe-error';
+import { MiniIframeError } from './mini-iframe-error';
 
 export class TimeoutError extends MiniIframeError {
+  public timeoutMilliSeconds = 0;
 
-    timeoutMilliSeconds = 0;
-
-    constructor(state: Partial<TimeoutError>) {
-        super(`Timeout after ${state.timeoutMilliSeconds} ms.`, state);                
-        this.name = TimeoutError.name; // stack traces display correctly now                 
-    }
+  public constructor(state: Partial<TimeoutError>) {
+    super(`Timeout after ${state.timeoutMilliSeconds} ms.`, state);
+    this.name = TimeoutError.name; // stack traces display correctly now
+  }
 }
