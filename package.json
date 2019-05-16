@@ -1,8 +1,9 @@
 {
   "name": "@emartech/mini-iframe-rpc",
   "description": "RPC across iframes using postMessage API",
-  "main": "dist/mini-iframe-rpc.js",
+  "main": "dist/mini-iframe-rpc.min.js",
   "scripts": {
+    "prebuild": "rm -rf ./dist",
     "build": "webpack --env development && webpack --env production",
     "pretest": "npm run lint",
     "test": "karma start test/karma.conf.js",

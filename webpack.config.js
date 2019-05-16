@@ -5,7 +5,7 @@ const env = require('yargs').argv.env; // use --env with webpack 2
 
 let libraryName = 'mini-iframe-rpc';
 
-let outputFile, mode, devtool;
+let outputFile, mode;
 
 if (env === 'production') {
   mode = 'production';
@@ -13,13 +13,12 @@ if (env === 'production') {
 } else {
   mode = 'development';
   outputFile = libraryName + (env === 'development' ? '.js' : '-[name].js');
-  devtool = 'inline-source-map';
 }
 
 const config = {
   mode: mode,
-  entry: __dirname + '/src/'+libraryName+'.ts',
-  devtool: devtool,
+  entry: __dirname + '/src/' + libraryName + '.ts',
+  devtool: 'source-map',
   output: {
     path: __dirname + '/dist',
     filename: outputFile,
@@ -48,18 +47,19 @@ const config = {
   },
   optimization: {
     minimizer: [new UglifyJsPlugin({
-        uglifyOptions: {
-          warnings: false,
-          parse: {},
-          compress: {},
-          mangle: true, // Note `mangle.properties` is `false` by default.
-          output: null,
-          toplevel: false,
-          nameCache: null,
-          ie8: false,
-          keep_fnames: false,
-        },
-      })]
+      uglifyOptions: {
+        warnings: false,
+        parse: {},
+        compress: {},
+        mangle: true, // Note `mangle.properties` is `false` by default.
+        output: null,
+        toplevel: false,
+        nameCache: null,
+        ie8: false,
+        keep_fnames: false,
+      },
+      sourceMap: true
+    })]
   }
 };
 module.exports = config;
