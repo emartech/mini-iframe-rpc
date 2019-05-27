@@ -55,7 +55,7 @@ export const serializeRemoteError = (cause: RemoteErrorCause, remoteExceptionNam
 };
 
 // tslint:disable-next-line:no-any
-export const deserializeRemoteError = (error: RemoteError) => {
+export const deserializeRemoteError = (error: RemoteError): RemoteErrorConstructor => {
   const constr = remoteErrorClasses[error.name] || RemoteError;
 
   return new constr(error);
