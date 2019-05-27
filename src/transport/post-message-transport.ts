@@ -26,7 +26,7 @@ export class PostMessageTransport implements TransportInterface {
     this.windowRef.addEventListener('message', this.recv);
   }
 
-  public close() {
+  public close(): void {
     this.windowRef.removeEventListener('message', this.recv);
   }
 
