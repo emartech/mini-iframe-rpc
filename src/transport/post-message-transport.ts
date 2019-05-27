@@ -1,7 +1,7 @@
 import { MessageBody } from '../json-rpc';
 import { Recipient, TransportConfig, TransportInterface } from './transport';
 
-const isInternetExplorer = () =>
+const isInternetExplorer = (): boolean =>
   // based on https://stackoverflow.com/questions/24861073/detect-if-any-kind-of-ie-msie/24861307#24861307
   navigator.appName === 'Microsoft Internet Explorer' || !!navigator.userAgent.match(/Trident|MSIE|rv:11/);
 
