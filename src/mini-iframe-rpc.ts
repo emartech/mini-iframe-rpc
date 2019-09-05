@@ -1,6 +1,5 @@
 /* tslint:disable no-any no-unsafe-any */
 
-import 'mdn-polyfills/Object.assign';
 import {
   deserializeRemoteError,
   EvaluationError,
